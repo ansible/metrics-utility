@@ -258,7 +258,11 @@ class Base:
             elif operations.get(col) == 'combine_json':
                 df[col] = df.apply(lambda row, c=col: combine_json(row.get(f'{c}_x'), row.get(f'{c}_y')), axis=1)
             elif operations.get(col) == 'combine_json_values':
-                df[col] = df.apply(lambda row, c=col: combine_json_values(row.get(f'{c}_x'), row.get(f'{c}_y')), axis=1)
+                # Preserve row-based behavior for empty or unusually labeled frames.
+                if not df.empty and not isinstance(df.columns, pd.MultiIndex) and df.columns.is_unique and f'{col}_x' in df and f'{col}_y' in df:
+                    df[col] = [combine_json_values(left, right) for left, right in zip(df[f'{col}_x'], df[f'{col}_y'], strict=True)]
+                else:
+                    df[col] = df.apply(lambda row, c=col: combine_json_values(row.get(f'{c}_x'), row.get(f'{c}_y')), axis=1)
             else:
                 df[col] = df[[f'{col}_x', f'{col}_y']].sum(axis=1)
             del df[f'{col}_x']

@@ -465,6 +465,91 @@ class TestBaseSummarizeMergedDataframes:
         result = base.summarize_merged_dataframes(df, ['facts'], operations={'facts': 'combine_json_values'})
         assert result['facts'][0] == {'cpu': {'x86', 'arm'}}
 
+    def test_combine_json_values_nested_facts_missing_values_and_duplicate_index(self):
+        from metrics_utility.automation_controller_billing.helpers import HashableDict
+
+        df = pd.DataFrame(
+            {
+                'facts_x': [{'cpu': {'x86'}, 'tags': {'site': 'a', 'rack': [1, 2]}}, None, pd.NA, {'ignore': None}],
+                'facts_y': [{'cpu': 'arm', 'tags': {'site': 'a', 'rack': [1, 2]}}, {'count': 0}, float('nan'), {'ignore': ''}],
+            },
+            index=[2, 1, 2, 1],
+        )
+
+        result = self._make_base().summarize_merged_dataframes(df, ['facts'], operations={'facts': 'combine_json_values'})
+
+        expected = pd.DataFrame(
+            {'facts': [{'cpu': {'x86', 'arm'}, 'tags': {HashableDict({'site': 'a', 'rack': (1, 2)})}}, {'count': {0}}, {}, {}]},
+            index=[2, 1, 2, 1],
+        )
+        pd.testing.assert_frame_equal(result, expected)
+
+    def test_combine_json_values_empty_dataframe_preserves_result_dtype(self):
+        df = pd.DataFrame({'facts_x': pd.Series(dtype=object), 'facts_y': pd.Series(dtype=object)})
+
+        result = self._make_base().summarize_merged_dataframes(df, ['facts'], operations={'facts': 'combine_json_values'})
+
+        pd.testing.assert_frame_equal(result, pd.DataFrame({'facts': pd.Series(dtype='float64')}))
+
+    def test_combine_json_values_duplicate_columns_preserve_existing_behavior(self):
+        df = pd.DataFrame([[{'cpu': 'left1'}, {'cpu': 'left2'}, {'cpu': 'right'}]], columns=['facts_x', 'facts_x', 'facts_y'])
+
+        result = self._make_base().summarize_merged_dataframes(df, ['facts'], operations={'facts': 'combine_json_values'})
+
+        pd.testing.assert_frame_equal(result, pd.DataFrame({'facts': [{'cpu': {'right'}}]}))
+
+    def test_combine_json_values_multiindex_columns_preserve_existing_behavior(self):
+        columns = pd.MultiIndex.from_tuples([('facts_x', 'a'), ('facts_x', 'b'), ('facts_y', 'a')])
+        df = pd.DataFrame([[{'cpu': 'left1'}, {'cpu': 'left2'}, {'cpu': 'right'}]], columns=columns)
+
+        result = self._make_base().summarize_merged_dataframes(df, ['facts'], operations={'facts': 'combine_json_values'})
+
+        expected = pd.DataFrame([[{}]], columns=pd.MultiIndex.from_tuples([('facts', '')]))
+        pd.testing.assert_frame_equal(result, expected)
+
+    @pytest.mark.parametrize('missing', ['facts_x', 'facts_y'])
+    def test_combine_json_values_missing_source_column_raises(self, missing):
+        df = pd.DataFrame({'facts_x': [{'cpu': 'left'}], 'facts_y': [{'cpu': 'right'}]}).drop(columns=missing)
+
+        with pytest.raises(KeyError, match=missing):
+            self._make_base().summarize_merged_dataframes(df, ['facts'], operations={'facts': 'combine_json_values'})
+
+    def test_combine_json_values_ambiguous_nested_missing_value_raises(self):
+        df = pd.DataFrame({'facts_x': [{'cpu': pd.NA}], 'facts_y': [{'cpu': 'right'}]})
+
+        with pytest.raises(TypeError, match='boolean value of NA is ambiguous'):
+            self._make_base().summarize_merged_dataframes(df, ['facts'], operations={'facts': 'combine_json_values'})
+
+    def test_combine_json_values_across_outer_merged_batches(self):
+        class FactsBase(ConcreteBase):
+            @staticmethod
+            def data_columns():
+                return ['facts']
+
+            @staticmethod
+            def cast_types():
+                return {'facts': object}
+
+            @staticmethod
+            def operations():
+                return {'facts': 'combine_json_values'}
+
+        base = FactsBase(extractor=None, month=datetime.date(2024, 1, 1), extra_params={})
+        batches = [
+            pd.DataFrame({'host_name': ['a', 'b'], 'facts': [{'cpu': {'x86'}}, {'cpu': {'arm'}}]}).set_index('host_name'),
+            pd.DataFrame({'host_name': ['a', 'c'], 'facts': [{'cpu': {'arm'}}, {'cpu': {'ppc'}}]}).set_index('host_name'),
+            pd.DataFrame({'host_name': ['a', 'b'], 'facts': [{'cpu': {'x86'}}, {'os': 'linux'}]}).set_index('host_name'),
+        ]
+        result = None
+        for batch in batches:
+            result = base.merge(result, batch)
+
+        expected = pd.DataFrame(
+            {'facts': [{'cpu': {'x86', 'arm'}}, {'cpu': {'arm'}, 'os': {'linux'}}, {'cpu': {'ppc'}}]},
+            index=pd.Index(['a', 'b', 'c'], name='host_name', dtype=object),
+        )
+        pd.testing.assert_frame_equal(result.sort_index(), expected)
+
     def test_multiple_columns_processed(self):
         base = self._make_base()
         df = pd.DataFrame(
