@@ -244,17 +244,20 @@ class Base:
         Returns:
             The DataFrame with reconciled columns (in-place).
         """
+        # merge() produces unique, single-level {col}_x/{col}_y pairs, so the
+        # column-based paths below can index them directly.
         for col in columns:
             if operations.get(col) == 'min':
                 df[col] = df[[f'{col}_x', f'{col}_y']].min(axis=1)
             elif operations.get(col) == 'max':
                 df[col] = df[[f'{col}_x', f'{col}_y']].max(axis=1)
             elif operations.get(col) == 'combine_set':
-                df[col] = df.apply(lambda row, c=col: combine_set(row.get(f'{c}_x'), row.get(f'{c}_y')), axis=1)
+                df[col] = [combine_set(left, right) for left, right in zip(df[f'{col}_x'], df[f'{col}_y'], strict=True)]
             elif operations.get(col) == 'combine_json':
+                # No dataframe engine uses this operation; kept row-based for now.
                 df[col] = df.apply(lambda row, c=col: combine_json(row.get(f'{c}_x'), row.get(f'{c}_y')), axis=1)
             elif operations.get(col) == 'combine_json_values':
-                df[col] = df.apply(lambda row, c=col: combine_json_values(row.get(f'{c}_x'), row.get(f'{c}_y')), axis=1)
+                df[col] = [combine_json_values(left, right) for left, right in zip(df[f'{col}_x'], df[f'{col}_y'], strict=True)]
             else:
                 df[col] = df[[f'{col}_x', f'{col}_y']].sum(axis=1)
             del df[f'{col}_x']

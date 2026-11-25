@@ -39,6 +39,21 @@ def _parse_events(events_value):
     return []
 
 
+def _extract_collection_and_module_names(events_value):
+    """Return collection and module names from the same parsed events value.
+
+    Only fully qualified module names with a valid collection prefix are included.
+    """
+    collections = set()
+    modules = set()
+    for fqcn in _parse_events(events_value):
+        name = DataframeContentUsage.extract_collection_name(fqcn)
+        if name is not None:
+            collections.add(name)
+            modules.add(fqcn)
+    return collections, modules
+
+
 def _extract_collection_names(events_value):
     """Parse the events JSON column and return a set of collection names.
 
@@ -49,12 +64,7 @@ def _extract_collection_names(events_value):
     Returns:
         Set of two-part collection name strings (e.g. ``{"azure.azcollection"}``).
     """
-    collections = set()
-    for fqcn in _parse_events(events_value):
-        name = DataframeContentUsage.extract_collection_name(fqcn)
-        if name is not None:
-            collections.add(name)
-    return collections
+    return _extract_collection_and_module_names(events_value)[0]
 
 
 def _extract_module_names(events_value):
@@ -69,11 +79,7 @@ def _extract_module_names(events_value):
     Returns:
         Set of full FQCN strings (e.g. ``{"azure.azcollection.azure_rm_vm"}``).
     """
-    modules = set()
-    for fqcn in _parse_events(events_value):
-        if DataframeContentUsage.extract_collection_name(fqcn) is not None:
-            modules.add(fqcn)
-    return modules
+    return _extract_collection_and_module_names(events_value)[1]
 
 
 def _make_group_key(organization_name, collection_name):
@@ -110,18 +116,21 @@ class IndirectManagedNodesAnonymizedRollup(BaseAnonymizedRollup):
         module_groups = {}
         all_host_names = set()
 
-        for _, row in dataframe.iterrows():
-            host_name = row.get('host_name')
+        # Iterate the columns instead of DataFrame.iterrows(); missing columns
+        # keep the defaults that row.get() used to supply.
+        host_iter = dataframe['host_name'] if 'host_name' in dataframe else [None] * len(dataframe)
+        org_iter = dataframe['organization_name'] if 'organization_name' in dataframe else [''] * len(dataframe)
+        events_iter = dataframe['events'] if 'events' in dataframe else [None] * len(dataframe)
+
+        for host_name, org_name, events in zip(host_iter, org_iter, events_iter, strict=True):
             if pd.isna(host_name):
                 continue
 
             host_name = str(host_name)
-            org_name = str(row.get('organization_name', ''))
+            org_name = str(org_name)
             all_host_names.add(host_name)
 
-            events = row.get('events')
-
-            collection_names = _extract_collection_names(events)
+            collection_names, module_names = _extract_collection_and_module_names(events)
             if not collection_names:
                 collection_names = {'_no_collection'}
 
@@ -135,7 +144,6 @@ class IndirectManagedNodesAnonymizedRollup(BaseAnonymizedRollup):
                     }
                 groups[key]['host_names'].add(host_name)
 
-            module_names = _extract_module_names(events)
             if not module_names:
                 module_names = {'_no_module'}
 

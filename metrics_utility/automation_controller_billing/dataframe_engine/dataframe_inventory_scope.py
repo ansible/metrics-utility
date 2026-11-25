@@ -6,21 +6,36 @@ from metrics_utility.automation_controller_billing.dataframe_engine.base import 
 from metrics_utility.automation_controller_billing.helpers import merge_json_sets, parse_json
 
 
-def compute_serial(row):
-    """Compute a compound serial key from a host row's canonical_facts.
+def serial_from_facts(canonical_facts):
+    """Compute a compound serial key from a single ``canonical_facts`` value.
 
     Args:
-        row: pandas Series with a ``canonical_facts`` field containing at least
+        canonical_facts: JSON string, dict, or null value containing
             ``ansible_product_serial`` and ``ansible_machine_id``.
 
     Returns:
         Compound serial string (``"serial/machine_id"``) or None if either
         field is null.
     """
-    facts = parse_json(row['canonical_facts'])
+    facts = parse_json(canonical_facts)
     if pd.isnull(facts.get('ansible_product_serial')) or pd.isnull(facts.get('ansible_machine_id')):
         return None
     return facts.get('ansible_product_serial', '') + '/' + facts.get('ansible_machine_id', '')
+
+
+def compute_serial(row):
+    """Compute a serial key from a host row.
+
+    Kept for callers that already hold a row; prefer :func:`serial_from_facts`
+    when working with a ``canonical_facts`` column.
+
+    Args:
+        row: pandas Series with a ``canonical_facts`` field.
+
+    Returns:
+        Compound serial string or None; see :func:`serial_from_facts`.
+    """
+    return serial_from_facts(row['canonical_facts'])
 
 
 # dataframe for main_host
@@ -59,7 +74,9 @@ class DataframeInventoryScope(Base):
 
                 billing_data['last_automation'] = pd.to_datetime(billing_data['last_automation'], format='ISO8601').dt.tz_localize(None)
 
-                billing_data['serial'] = billing_data.apply(compute_serial, axis=1)
+                # Batches are non-empty here (skipped above) and canonical_facts
+                # is a single column, so the column can be read directly.
+                billing_data['serial'] = billing_data['canonical_facts'].map(serial_from_facts)
 
                 experimental_dedup = self.extra_params.get('deduplicator') == 'ccsp-experimental'
                 if experimental_dedup:
