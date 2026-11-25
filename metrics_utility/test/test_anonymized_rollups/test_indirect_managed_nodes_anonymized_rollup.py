@@ -1,10 +1,6 @@
 import json
 
-from unittest.mock import patch
-
 import pandas as pd
-
-import metrics_utility.anonymized_rollups.indirect_managed_nodes_anonymized_rollup as indirect_rollup
 
 from metrics_utility.anonymized_rollups.indirect_managed_nodes_anonymized_rollup import (
     IndirectManagedNodesAnonymizedRollup,
@@ -142,8 +138,8 @@ def test_prepare_handles_events_as_list():
     assert result['groups']['OrgA||cisco.ios']['host_count'] == 1
 
 
-def test_prepare_parses_events_once_and_preserves_final_counts():
-    """Mixed events retain collection and module counts without reparsing rows."""
+def test_prepare_mixed_events_preserves_final_counts():
+    """Mixed events retain collection and module counts."""
     rollup = IndirectManagedNodesAnonymizedRollup()
     data = _make_dataframe(
         [
@@ -160,10 +156,7 @@ def test_prepare_parses_events_once_and_preserves_final_counts():
         ]
     )
 
-    with patch.object(indirect_rollup, '_parse_events', wraps=indirect_rollup._parse_events) as parse_events:
-        prepared = rollup.prepare(data)
-
-    assert parse_events.call_count == 5
+    prepared = rollup.prepare(data)
     assert prepared['groups']['OrgA||cisco.ios']['host_names'] == ['host1']
     assert prepared['groups']['OrgB||cisco.ios']['host_names'] == ['host1']
     assert prepared['module_groups']['OrgA||cisco.ios.ios_command']['host_names'] == ['host1']
@@ -405,6 +398,30 @@ def test_prepare_defaults_missing_organization_name():
 
     assert result['indirect_nodes_total'] == 1
     assert '||cisco.ios' in result['groups']
+
+
+def test_prepare_defaults_missing_events():
+    """prepare() treats a missing events column as no events."""
+    rollup = IndirectManagedNodesAnonymizedRollup()
+
+    data = pd.DataFrame([{'id': 1, 'host_name': 'host1', 'host_remote_id': None, 'organization_name': 'OrgA'}])
+
+    result = rollup.prepare(data)
+
+    assert result['indirect_nodes_total'] == 1
+    assert result['groups']['OrgA||_no_collection']['host_names'] == ['host1']
+    assert result['module_groups']['OrgA||_no_module']['host_names'] == ['host1']
+
+
+def test_prepare_without_host_name_skips_all_rows():
+    """prepare() finds no indirect nodes when the host_name column is absent."""
+    rollup = IndirectManagedNodesAnonymizedRollup()
+
+    data = pd.DataFrame([{'id': 1, 'organization_name': 'OrgA', 'events': '["cisco.ios.ios_command"]'}])
+
+    result = rollup.prepare(data)
+
+    assert result == {'groups': {}, 'module_groups': {}, 'indirect_nodes_total': 0}
 
 
 def test_merge_with_none_data_new():

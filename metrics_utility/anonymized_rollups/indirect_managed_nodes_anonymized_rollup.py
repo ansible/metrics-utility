@@ -116,16 +116,19 @@ class IndirectManagedNodesAnonymizedRollup(BaseAnonymizedRollup):
         module_groups = {}
         all_host_names = set()
 
-        for _, row in dataframe.iterrows():
-            host_name = row.get('host_name')
+        # Iterate the columns instead of DataFrame.iterrows(); missing columns
+        # keep the defaults that row.get() used to supply.
+        host_iter = dataframe['host_name'] if 'host_name' in dataframe else [None] * len(dataframe)
+        org_iter = dataframe['organization_name'] if 'organization_name' in dataframe else [''] * len(dataframe)
+        events_iter = dataframe['events'] if 'events' in dataframe else [None] * len(dataframe)
+
+        for host_name, org_name, events in zip(host_iter, org_iter, events_iter, strict=True):
             if pd.isna(host_name):
                 continue
 
             host_name = str(host_name)
-            org_name = str(row.get('organization_name', ''))
+            org_name = str(org_name)
             all_host_names.add(host_name)
-
-            events = row.get('events')
 
             collection_names, module_names = _extract_collection_and_module_names(events)
             if not collection_names:
