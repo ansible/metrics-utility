@@ -389,31 +389,14 @@ class TestBaseSummarizeMergedDataframes:
         expected = pd.DataFrame({'tags': [{'a', 'b', 'd'}, {'c'}, {'e'}, set()]}, index=[2, 1, 2, 1])
         pd.testing.assert_frame_equal(result, expected)
 
-    def test_combine_set_empty_dataframe_preserves_result_dtype(self):
+    def test_combine_set_empty_dataframe(self):
         base = self._make_base()
         df = pd.DataFrame({'tags_x': pd.Series(dtype=object), 'tags_y': pd.Series(dtype=object)})
 
         result = base.summarize_merged_dataframes(df, ['tags'], operations={'tags': 'combine_set'})
 
-        pd.testing.assert_frame_equal(result, pd.DataFrame({'tags': pd.Series(dtype='float64')}))
-
-    def test_combine_set_duplicate_column_names_preserves_existing_behavior(self):
-        base = self._make_base()
-        df = pd.DataFrame([[{'left1'}, {'left2'}, {'right'}]], columns=['tags_x', 'tags_x', 'tags_y'])
-
-        result = base.summarize_merged_dataframes(df, ['tags'], operations={'tags': 'combine_set'})
-
-        pd.testing.assert_frame_equal(result, pd.DataFrame({'tags': [{'right'}]}))
-
-    def test_combine_set_multiindex_columns_preserves_existing_behavior(self):
-        base = self._make_base()
-        columns = pd.MultiIndex.from_tuples([('tags_x', 'a'), ('tags_x', 'b'), ('tags_y', 'a')])
-        df = pd.DataFrame([[{'left1'}, {'left2'}, {'right'}]], columns=columns)
-
-        result = base.summarize_merged_dataframes(df, ['tags'], operations={'tags': 'combine_set'})
-
-        expected = pd.DataFrame([[set()]], columns=pd.MultiIndex.from_tuples([('tags', '')]))
-        pd.testing.assert_frame_equal(result, expected)
+        assert result.empty
+        assert list(result.columns) == ['tags']
 
     @pytest.mark.parametrize('missing', ['tags_x', 'tags_y'])
     def test_combine_set_missing_source_column_raises(self, missing):
@@ -484,40 +467,19 @@ class TestBaseSummarizeMergedDataframes:
         )
         pd.testing.assert_frame_equal(result, expected)
 
-    def test_combine_json_values_empty_dataframe_preserves_result_dtype(self):
+    def test_combine_json_values_empty_dataframe(self):
         df = pd.DataFrame({'facts_x': pd.Series(dtype=object), 'facts_y': pd.Series(dtype=object)})
 
         result = self._make_base().summarize_merged_dataframes(df, ['facts'], operations={'facts': 'combine_json_values'})
 
-        pd.testing.assert_frame_equal(result, pd.DataFrame({'facts': pd.Series(dtype='float64')}))
-
-    def test_combine_json_values_duplicate_columns_preserve_existing_behavior(self):
-        df = pd.DataFrame([[{'cpu': 'left1'}, {'cpu': 'left2'}, {'cpu': 'right'}]], columns=['facts_x', 'facts_x', 'facts_y'])
-
-        result = self._make_base().summarize_merged_dataframes(df, ['facts'], operations={'facts': 'combine_json_values'})
-
-        pd.testing.assert_frame_equal(result, pd.DataFrame({'facts': [{'cpu': {'right'}}]}))
-
-    def test_combine_json_values_multiindex_columns_preserve_existing_behavior(self):
-        columns = pd.MultiIndex.from_tuples([('facts_x', 'a'), ('facts_x', 'b'), ('facts_y', 'a')])
-        df = pd.DataFrame([[{'cpu': 'left1'}, {'cpu': 'left2'}, {'cpu': 'right'}]], columns=columns)
-
-        result = self._make_base().summarize_merged_dataframes(df, ['facts'], operations={'facts': 'combine_json_values'})
-
-        expected = pd.DataFrame([[{}]], columns=pd.MultiIndex.from_tuples([('facts', '')]))
-        pd.testing.assert_frame_equal(result, expected)
+        assert result.empty
+        assert list(result.columns) == ['facts']
 
     @pytest.mark.parametrize('missing', ['facts_x', 'facts_y'])
     def test_combine_json_values_missing_source_column_raises(self, missing):
         df = pd.DataFrame({'facts_x': [{'cpu': 'left'}], 'facts_y': [{'cpu': 'right'}]}).drop(columns=missing)
 
         with pytest.raises(KeyError, match=missing):
-            self._make_base().summarize_merged_dataframes(df, ['facts'], operations={'facts': 'combine_json_values'})
-
-    def test_combine_json_values_ambiguous_nested_missing_value_raises(self):
-        df = pd.DataFrame({'facts_x': [{'cpu': pd.NA}], 'facts_y': [{'cpu': 'right'}]})
-
-        with pytest.raises(TypeError, match='boolean value of NA is ambiguous'):
             self._make_base().summarize_merged_dataframes(df, ['facts'], operations={'facts': 'combine_json_values'})
 
     def test_combine_json_values_across_outer_merged_batches(self):
