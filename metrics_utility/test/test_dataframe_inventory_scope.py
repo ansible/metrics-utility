@@ -6,8 +6,8 @@ import pytest
 
 from metrics_utility.automation_controller_billing.dataframe_engine.dataframe_inventory_scope import (
     DataframeInventoryScope,
-    _compute_serials,
     compute_serial,
+    serial_from_facts,
 )
 
 
@@ -24,13 +24,13 @@ from metrics_utility.automation_controller_billing.dataframe_engine.dataframe_in
         (pd.NA, None),
     ],
 )
-def test_compute_serials_handles_facts(facts, expected):
-    dataframe = pd.DataFrame({'canonical_facts': [facts], 'other': [1]})
+def test_serial_from_facts_handles_facts(facts, expected):
+    assert serial_from_facts(facts) == expected
+    dataframe = pd.DataFrame({'canonical_facts': [facts]})
+    assert dataframe['canonical_facts'].map(serial_from_facts).iloc[0] == expected
 
-    assert _compute_serials(dataframe).iloc[0] == expected
 
-
-def test_compute_serials_preserves_duplicate_index_and_dtype():
+def test_serial_from_facts_preserves_duplicate_index_and_dtype():
     dataframe = pd.DataFrame(
         {
             'canonical_facts': [
@@ -43,7 +43,7 @@ def test_compute_serials_preserves_duplicate_index_and_dtype():
         index=[4, 2, 4],
     )
 
-    result = _compute_serials(dataframe)
+    result = dataframe['canonical_facts'].map(serial_from_facts)
 
     expected = pd.Series(['first/one', None, 'second/two'], index=[4, 2, 4], dtype=result.dtype)
     pd.testing.assert_series_equal(result, expected, check_names=False)
@@ -51,31 +51,10 @@ def test_compute_serials_preserves_duplicate_index_and_dtype():
 
 
 @pytest.mark.parametrize('facts', ['null', '[]', '123'])
-def test_compute_serials_preserves_invalid_json_value_errors(facts):
-    dataframe = pd.DataFrame({'canonical_facts': [facts], 'other': [1]})
-
+def test_serial_from_facts_non_object_json_currently_raises(facts):
+    """Documents current behavior, not a contract: the parse_json gap is out of scope."""
     with pytest.raises(AttributeError):
-        _compute_serials(dataframe)
-
-
-def test_compute_serials_preserves_missing_column_error():
-    with pytest.raises(KeyError, match='canonical_facts'):
-        _compute_serials(pd.DataFrame({'other': [1]}))
-
-
-@pytest.mark.parametrize(
-    'dataframe',
-    [
-        pd.DataFrame({'canonical_facts': pd.Series(dtype=object)}),
-        pd.DataFrame([['{}', '{}']], columns=['canonical_facts', 'canonical_facts']),
-        pd.DataFrame([['{}']], columns=pd.MultiIndex.from_tuples([('canonical_facts', 'value')])),
-    ],
-    ids=['empty', 'duplicate-columns', 'multi-level-columns'],
-)
-def test_compute_serials_preserves_unusual_dataframe_behavior(dataframe):
-    expected = dataframe.apply(compute_serial, axis=1)
-
-    pd.testing.assert_series_equal(_compute_serials(dataframe), expected)
+        serial_from_facts(facts)
 
 
 def test_build_dataframe_combines_serials_across_batches():
