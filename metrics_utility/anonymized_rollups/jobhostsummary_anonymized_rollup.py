@@ -206,10 +206,26 @@ class JobHostSummaryAnonymizedRollup(BaseAnonymizedRollup):
 
         # Keep ansible_version column name (no rename needed)
 
-        # Compute host_outcome
+        # Compute host_outcome and flag columns
+        return self._add_outcome_columns(dataframe)
+
+    def _add_outcome_columns(self, dataframe):
+        """Compute ``host_outcome`` and int8 outcome flags for groupby sums."""
         dataframe['host_outcome'] = 'successful'
         dataframe.loc[dataframe['failures'] > 0, 'host_outcome'] = 'failed'
         dataframe.loc[dataframe['dark'] > 0, 'host_outcome'] = 'unreachable'
+
+        dataframe['is_successful'] = (dataframe['host_outcome'] == 'successful').astype('int8')
+        dataframe['is_failed'] = (dataframe['host_outcome'] == 'failed').astype('int8')
+        dataframe['is_unreachable'] = (dataframe['host_outcome'] == 'unreachable').astype('int8')
+
+        return dataframe
+
+    def _ensure_outcome_columns(self, dataframe):
+        """Add outcome flag columns if a caller skipped ``_normalize_dataframe``."""
+        if 'is_successful' not in dataframe.columns:
+            dataframe = self._add_outcome_columns(dataframe)
+        return dataframe
 
     def _aggregate_by_job(self, dataframe):
         """Aggregate dataframe by job_remote_id or by job_type/launch_type/ansible_version."""
@@ -219,6 +235,7 @@ class JobHostSummaryAnonymizedRollup(BaseAnonymizedRollup):
 
     def _aggregate_by_job_remote_id(self, dataframe):
         """Aggregate by job_remote_id to merge hosts for the same job."""
+        dataframe = self._ensure_outcome_columns(dataframe)
         return (
             dataframe.groupby('job_remote_id')
             .agg(
@@ -228,9 +245,9 @@ class JobHostSummaryAnonymizedRollup(BaseAnonymizedRollup):
                 skipped_total=('skipped', 'sum'),
                 ignored_total=('ignored', 'sum'),
                 rescued_total=('rescued', 'sum'),
-                successful_hosts_total=('host_outcome', lambda x: (x == 'successful').sum()),
-                failed_hosts_total=('host_outcome', lambda x: (x == 'failed').sum()),
-                unreachable_hosts_total=('host_outcome', lambda x: (x == 'unreachable').sum()),
+                successful_hosts_total=('is_successful', 'sum'),
+                failed_hosts_total=('is_failed', 'sum'),
+                unreachable_hosts_total=('is_unreachable', 'sum'),
                 job_type=('model', 'first'),
                 launch_type=('launch_type', 'first'),
                 ansible_version=('ansible_version', 'first'),
@@ -240,6 +257,7 @@ class JobHostSummaryAnonymizedRollup(BaseAnonymizedRollup):
 
     def _aggregate_by_job_type_directly(self, dataframe):
         """Aggregate directly by job_type, launch_type, ansible_version when no job_remote_id."""
+        dataframe = self._ensure_outcome_columns(dataframe)
         return (
             dataframe.groupby(['model', 'launch_type', 'ansible_version'])
             .agg(
@@ -249,9 +267,9 @@ class JobHostSummaryAnonymizedRollup(BaseAnonymizedRollup):
                 skipped_total=('skipped', 'sum'),
                 ignored_total=('ignored', 'sum'),
                 rescued_total=('rescued', 'sum'),
-                successful_hosts_total=('host_outcome', lambda x: (x == 'successful').sum()),
-                failed_hosts_total=('host_outcome', lambda x: (x == 'failed').sum()),
-                unreachable_hosts_total=('host_outcome', lambda x: (x == 'unreachable').sum()),
+                successful_hosts_total=('is_successful', 'sum'),
+                failed_hosts_total=('is_failed', 'sum'),
+                unreachable_hosts_total=('is_unreachable', 'sum'),
             )
             .reset_index()
             .rename(columns={'model': 'job_type'})
@@ -327,7 +345,7 @@ class JobHostSummaryAnonymizedRollup(BaseAnonymizedRollup):
             )
 
         # Normalize dataframe columns
-        self._normalize_dataframe(dataframe)
+        dataframe = self._normalize_dataframe(dataframe)
 
         # Collect all unique host_ids from the dataframe (top-level, not per-grouping)
         if 'host_remote_id' in dataframe.columns:
