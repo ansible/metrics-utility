@@ -3,6 +3,8 @@
 import os
 import tempfile
 
+from botocore.exceptions import ClientError
+
 from metrics_utility.automation_controller_billing.base.s3_handler import S3Handler
 from metrics_utility.logger import logger
 
@@ -31,7 +33,15 @@ class ReportSaverS3:
         Returns:
             True if at least one object is found at the destination key.
         """
-        return len(list(self.s3_handler.list_files(self.report_spreadsheet_destination_path))) > 0
+        key = self.report_spreadsheet_destination_path
+        try:
+            self.s3_handler.get_s3_client().head_object(Bucket=self.s3_handler.bucket_name, Key=key)
+            return True
+        except ClientError as exc:
+            code = exc.response.get('Error', {}).get('Code')
+            if code in ('404', 'NoSuchKey'):
+                return False
+            raise
 
     def save(self, report_spreadsheet):
         """Save the rendered spreadsheet to a temporary file and upload it to S3.

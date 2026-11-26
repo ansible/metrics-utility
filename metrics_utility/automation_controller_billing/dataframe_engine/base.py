@@ -227,7 +227,7 @@ class Base:
 
         return df.astype(types)
 
-    def summarize_merged_dataframes(self, df, columns, operations={}):
+    def summarize_merged_dataframes(self, df, columns, operations=None):
         """Reduce paired ``_x``/``_y`` suffix columns produced by an outer merge.
 
         For each column in *columns*, the ``_x`` and ``_y`` variants are combined
@@ -244,6 +244,8 @@ class Base:
         Returns:
             The DataFrame with reconciled columns (in-place).
         """
+        if operations is None:
+            operations = {}
         # merge() produces unique, single-level {col}_x/{col}_y pairs, so the
         # column-based paths below can index them directly.
         for col in columns:
@@ -254,8 +256,7 @@ class Base:
             elif operations.get(col) == 'combine_set':
                 df[col] = [combine_set(left, right) for left, right in zip(df[f'{col}_x'], df[f'{col}_y'], strict=True)]
             elif operations.get(col) == 'combine_json':
-                # No dataframe engine uses this operation; kept row-based for now.
-                df[col] = df.apply(lambda row, c=col: combine_json(row.get(f'{c}_x'), row.get(f'{c}_y')), axis=1)
+                df[col] = [combine_json(a, b) for a, b in zip(df[f'{col}_x'], df[f'{col}_y'], strict=True)]
             elif operations.get(col) == 'combine_json_values':
                 df[col] = [combine_json_values(left, right) for left, right in zip(df[f'{col}_x'], df[f'{col}_y'], strict=True)]
             else:
@@ -315,10 +316,8 @@ class Base:
         if not hostname_mapping:
             return dataframe
 
-        # map hostnames to canonical value
-        df = dataframe.copy()
-
-        df['host_name'] = df['host_name'].map(hostname_mapping).fillna(df['host_name'])
+        # map hostnames to canonical value without deep-copying the whole frame
+        df = dataframe.assign(host_name=dataframe['host_name'].map(hostname_mapping).fillna(dataframe['host_name']))
 
         # multiple rows can now have the same hostname, regroup
         df_grouped = self.regroup(df)

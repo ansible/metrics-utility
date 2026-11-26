@@ -11,6 +11,9 @@ from metrics_utility.exceptions import MetricsException
 from metrics_utility.logger import logger
 
 
+_SUFFIX_NUM_RE = re.compile(r'-\d+\.tar\.gz$')
+_SUFFIX_NUM_KEY_RE = re.compile(r'-\d+-\w+\.tar\.gz$')
+
 _main_host_sheets = [
     'inventory_scope',
     'jobs',
@@ -84,7 +87,7 @@ class Base:
         """
         try:
             with open(file_path) as f:
-                return json.loads(f.read())
+                return json.load(f)
         except FileNotFoundError:
             logger.warning(f'{self.LOG_PREFIX} missing required file under path: {file_path} and date: {self.date}')
 
@@ -220,17 +223,17 @@ class Base:
 
         def match(s):
             # include all files produced by 0.6.0 and lower, and anything with an unexpected name
-            if re.search(r'-\d+.tar.gz$', s):
+            if _SUFFIX_NUM_RE.search(s):
                 return True
-            if re.search(r'-\d+-\w+.tar.gz$', s) is None:
+            if _SUFFIX_NUM_KEY_RE.search(s) is None:
                 return True
 
             # should not happen, but make sure we're not ignoring data if it does
-            if s.find('-unknown.') or s.find('-config.'):
+            if '-unknown.' in s or '-config.' in s:
                 return True
 
             # match against collections
-            return any(s.find(f'-{key}.') != -1 for key in collections)
+            return any(f'-{key}.' in s for key in collections)
 
         paths = filter(match, paths)
         return list(paths)

@@ -4,9 +4,13 @@ import os
 
 import boto3
 
+from botocore.config import Config
 from botocore.exceptions import ClientError
 
 from metrics_utility.logger import logger
+
+
+_S3_CONFIG = Config(max_pool_connections=20, retries={'max_attempts': 3}, connect_timeout=5)
 
 
 class S3Handler:
@@ -32,6 +36,8 @@ class S3Handler:
             )
 
         self._session = None
+        self._s3_resource = None
+        self._s3_client = None
 
     @property
     def session(self):
@@ -62,7 +68,10 @@ class S3Handler:
         Returns:
             A :class:`boto3.resources.factory.s3.ServiceResource` instance.
         """
-        return self.session.resource('s3', endpoint_url=self.bucket_endpoint)
+        if self._s3_resource is not None:
+            return self._s3_resource
+        self._s3_resource = self.session.resource('s3', endpoint_url=self.bucket_endpoint, config=_S3_CONFIG)
+        return self._s3_resource
 
     def get_s3_client(self):
         """Return a boto3 S3 low-level client connected to the configured endpoint.
@@ -70,7 +79,10 @@ class S3Handler:
         Returns:
             A :class:`botocore.client.S3` instance.
         """
-        return self.session.client('s3', endpoint_url=self.bucket_endpoint)
+        if self._s3_client is not None:
+            return self._s3_client
+        self._s3_client = self.session.client('s3', endpoint_url=self.bucket_endpoint, config=_S3_CONFIG)
+        return self._s3_client
 
     def upload_file(self, file_name, object_name=None):
         """Upload a file to an S3 bucket
@@ -124,7 +136,7 @@ class S3Handler:
         """
         s3_resource = self.get_s3_resource()
 
-        paginator = s3_resource.meta.client.get_paginator('list_objects')
+        paginator = s3_resource.meta.client.get_paginator('list_objects_v2')
         for resp in paginator.paginate(Bucket=self.bucket_name, Prefix=prefix):
             for ret_value in resp.get('Contents', []):
                 yield ret_value['Key']

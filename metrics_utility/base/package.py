@@ -8,6 +8,9 @@ from abc import abstractmethod
 
 import requests
 
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
+
 from metrics_utility.logger import logger
 
 from .collection_data_status import CollectionDataStatus
@@ -183,6 +186,10 @@ class Package:
                 )
             }
             s = requests.Session()
+            retry_strategy = Retry(total=3, backoff_factor=0.5, status_forcelist=[429, 500, 502, 503, 504])
+            adapter = HTTPAdapter(max_retries=retry_strategy)
+            s.mount('https://', adapter)
+            s.mount('http://', adapter)
             if self.shipping_auth_mode() == self.SHIPPING_AUTH_CERTIFICATES:
                 # as a single file (containing the private key and the certificate) or
                 # as a tuple of both files paths (cert_file, keyfile)

@@ -406,11 +406,11 @@ class Base:
                     pass
             return {'infra_type': 'Unknown', 'infra_bucket': 'Unknown', 'device_type': 'Unknown'}
 
-        # Extract infrastructure information
-        infra_info = indirect_nodes['facts'].apply(extract_infra_info)
-        indirect_nodes['infra_type'] = infra_info.apply(lambda x: x['infra_type'])
-        indirect_nodes['infra_bucket'] = infra_info.apply(lambda x: x['infra_bucket'])
-        indirect_nodes['device_type'] = infra_info.apply(lambda x: x['device_type'])
+        # Extract infrastructure information — single apply then expand
+        infra_df = pd.DataFrame(indirect_nodes['facts'].apply(extract_infra_info).tolist())
+        indirect_nodes['infra_type'] = infra_df['infra_type']
+        indirect_nodes['infra_bucket'] = infra_df['infra_bucket']
+        indirect_nodes['device_type'] = infra_df['device_type']
 
         # Group by infra_type, infra_bucket, and device_type
         agg_dict = {

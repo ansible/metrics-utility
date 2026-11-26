@@ -2,6 +2,7 @@
 Helper utilities for anonymized rollups.
 """
 
+import functools
 import json
 import math
 import os
@@ -15,6 +16,7 @@ except ImportError:
     HAS_NUMPY = False
 
 
+@functools.lru_cache(maxsize=1)
 def load_known_collections():
     """Load the public collections whitelist from collections.json.
 

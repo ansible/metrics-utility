@@ -5,6 +5,10 @@ import re
 from metrics_utility.automation_controller_billing.dataframe_engine.base import Base
 
 
+_COLLECTION_RE = re.compile(r'^(\w+)\.(\w+)\.(\w+)(?:\.\w+)*$')
+_STANDALONE_ROLE_RE = re.compile(r'^(\w+)\.(\w+)$')
+
+
 # dataframe for main_jobevent
 class DataframeContentUsage(Base):
     """Aggregates task runs by host/module/collection/role from main_jobevent CSV batches."""
@@ -38,12 +42,12 @@ class DataframeContentUsage(Base):
                 events['task_action'] = events.resolved_action.fillna(events.task_action).astype(str)
                 events['role'] = events.resolved_role.fillna(events.role).astype(str)
                 # Only get valid role names into role name
-                events['role'] = events['role'].apply(lambda x: self.extract_role_name(x))
+                events['role'] = events['role'].map(self.extract_role_name)
 
                 # Rename columns to match the reality, they are just names, not normalized cols anymore
                 events.rename(columns={'task_action': 'module_name', 'role': 'role_name'}, inplace=True)
 
-                events['collection_name'] = events['module_name'].apply(self.extract_collection_name)
+                events['collection_name'] = events['module_name'].map(self.extract_collection_name)
 
                 # Final cleanup if some module names didn't connect, otherwise this will fail
                 # to insert with not null constraint on module_name
@@ -94,19 +98,23 @@ class DataframeContentUsage(Base):
     def collection_regexp():
         """Return the regex pattern for matching fully-qualified collection module names.
 
+        Kept for backwards compatibility; prefer :data:`_COLLECTION_RE`.
+
         Returns:
             Regex pattern string.
         """
-        return r'^(\w+)\.(\w+)\.(\w+)(?:\.\w+)*$'
+        return _COLLECTION_RE.pattern
 
     @staticmethod
     def standalone_role_regexp():
         """Return the regex pattern for matching standalone two-part role names.
 
+        Kept for backwards compatibility; prefer :data:`_STANDALONE_ROLE_RE`.
+
         Returns:
             Regex pattern string.
         """
-        return r'^(\w+)\.(\w+)$'
+        return _STANDALONE_ROLE_RE.pattern
 
     @staticmethod
     def extract_collection_name(x):
@@ -121,7 +129,7 @@ class DataframeContentUsage(Base):
         if not isinstance(x, str):
             return None
 
-        m = re.match(DataframeContentUsage.collection_regexp(), x)
+        m = _COLLECTION_RE.match(x)
 
         if m:
             return f'{m.groups()[0]}.{m.groups()[1]}'
@@ -141,8 +149,8 @@ class DataframeContentUsage(Base):
         if not isinstance(x, str):
             return None
 
-        collection_role = re.match(DataframeContentUsage.collection_regexp(), x)
-        standalone_role = re.match(DataframeContentUsage.standalone_role_regexp(), x)
+        collection_role = _COLLECTION_RE.match(x)
+        standalone_role = _STANDALONE_ROLE_RE.match(x)
 
         if collection_role:
             return f'{collection_role.groups()[0]}.{collection_role.groups()[1]}.{collection_role.groups()[2]}'

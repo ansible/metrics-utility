@@ -26,10 +26,12 @@ class CsvFileSplitter(io.StringIO):
 
         self.counter = 0
         fname = f'{self.filespec}_split{len(self.files)}'
-        self.currentfile = open(fname, 'w', encoding='utf-8')
+        self.currentfile = open(fname, 'w', encoding='utf-8', buffering=64 * 1024)
         self.files.append(fname)
         if self.header:
-            self.counter += self.currentfile.write(f'{self.header}\n')
+            header_line = f'{self.header}\n'
+            self.currentfile.write(header_line)
+            self.counter += len(header_line.encode('utf-8'))
 
     def file_list(self, keep_empty=False):
         """Returns list of written files"""
@@ -53,6 +55,8 @@ class CsvFileSplitter(io.StringIO):
         """Writes to file and creates new one if file exceedes threshold"""
         if not self.header:
             self.header = s[: s.index('\n')]
-        self.counter += self.currentfile.write(s)
+        written = self.currentfile.write(s)
+        # Track bytes, not chars, to account for multi-byte UTF-8 correctly
+        self.counter += len(s.encode('utf-8')) if isinstance(s, str) else written
         if self.counter >= self.max_file_size:
             self.cycle_file()

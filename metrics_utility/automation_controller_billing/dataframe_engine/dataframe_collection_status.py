@@ -17,7 +17,7 @@ class DataframeCollectionStatus(Base):
             datetimes, or None if no data was found.
         """
         # all-rows dataframe, no aggregation
-        dataframe = None
+        batches = []
 
         for date in self.dates():
             # collections=None because data_collection_status is in every tarball, and none of them are named after it
@@ -26,13 +26,14 @@ class DataframeCollectionStatus(Base):
                 if batch.empty:
                     continue
 
-                # Merge batches
-                if dataframe is None:
-                    dataframe = batch
-                else:
-                    dataframe = pd.concat([dataframe, batch], ignore_index=True)
+                batches.append(batch)
 
-        if dataframe is None or dataframe.empty:
+        if not batches:
+            return None
+
+        dataframe = pd.concat(batches, ignore_index=True) if len(batches) > 1 else batches[0]
+
+        if dataframe.empty:
             return None
 
         dataframe['collection_start_timestamp'] = pd.to_datetime(dataframe['collection_start_timestamp'], format='ISO8601').dt.tz_localize(None)

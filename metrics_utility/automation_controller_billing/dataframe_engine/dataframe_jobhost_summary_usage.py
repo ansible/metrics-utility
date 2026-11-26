@@ -59,20 +59,12 @@ class DataframeJobhostSummaryUsage(Base):
                     # Always create the column for consistent structure, but keep it empty when dedup is not enabled
                     billing_data['host_names_before_dedup'] = None
 
-                # Summarize all task counts into 1 col
-                def sum_columns(row):
-                    return sum([row[i] for i in ['dark', 'failures', 'ok', 'skipped', 'ignored', 'rescued']])
-
-                # Summarize all reachable task counts into 1 col
-                def sum_reachable_columns(row):
-                    return sum([row[i] for i in ['failures', 'ok', 'skipped', 'ignored', 'rescued']])
-
                 if managed_node_type == DIRECT:
-                    billing_data['task_runs'] = billing_data.apply(sum_columns, axis=1)
+                    billing_data['task_runs'] = billing_data[['dark', 'failures', 'ok', 'skipped', 'ignored', 'rescued']].sum(axis=1)
 
                     # Filter out managed nodes that were unreachable (represented as the dark counter).
                     # We want to count hosts that had at least one task running.
-                    billing_data['reachable_task_runs'] = billing_data.apply(sum_reachable_columns, axis=1)
+                    billing_data['reachable_task_runs'] = billing_data[['failures', 'ok', 'skipped', 'ignored', 'rescued']].sum(axis=1)
                     billing_data = billing_data[billing_data['reachable_task_runs'] > 0].copy()
 
                     # Initialize with empty dicts - will be populated during deduplication if experimental dedup is enabled

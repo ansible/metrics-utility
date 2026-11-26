@@ -16,7 +16,7 @@ class DBDataframeHostMetric(Base):
             Concatenated DataFrame with timestamp columns coerced to timezone-naive
             datetimes, or None if no batches were returned.
         """
-        host_metric_concat = None
+        batches = []
         since = pd.Timestamp(self.extractor.extra_params['opt_since'])
         since = since.tz_localize('UTC') if since.tzinfo is None else since.tz_convert('UTC')
 
@@ -29,22 +29,26 @@ class DBDataframeHostMetric(Base):
             if host_metric.empty:
                 continue
 
+            # Re-filter to automation scope: the DB query returns rows where
+            # last_automation OR last_deleted >= since, but downstream only
+            # wants rows where last_automation is in range.
             last_automation = pd.to_datetime(host_metric['last_automation'], format='ISO8601', utc=True)
-            host_metric = host_metric.loc[last_automation >= since].copy()
-            if host_metric.empty:
+            mask = last_automation >= since
+            # Handle batches that lack first_automation (time-range probe with
+            # only last_automation column) — skip entirely when no rows match.
+            if not mask.any():
                 continue
-
+            host_metric = host_metric.loc[mask].copy() if len(mask) != mask.sum() else host_metric
             # Spreadsheet doesn't support timezones
             host_metric['first_automation'] = pd.to_datetime(host_metric['first_automation'], format='ISO8601').dt.tz_localize(None)
             host_metric['last_automation'] = pd.to_datetime(host_metric['last_automation'], format='ISO8601').dt.tz_localize(None)
             host_metric['last_deleted'] = pd.to_datetime(host_metric['last_deleted'], format='ISO8601').dt.tz_localize(None)
 
-            if host_metric_concat is None:
-                host_metric_concat = host_metric
-            else:
-                host_metric_concat = pd.concat([host_metric_concat, host_metric], ignore_index=True)
+            batches.append(host_metric)
 
-        if host_metric_concat is None:
+        if not batches:
             return None
+
+        host_metric_concat = pd.concat(batches, ignore_index=True) if len(batches) > 1 else batches[0]
 
         return host_metric_concat.reset_index()

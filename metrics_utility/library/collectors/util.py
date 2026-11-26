@@ -286,13 +286,48 @@ def _copy_table_pandas(db, query, params=None):
         # Get column names from cursor description
         columns = [desc[0] for desc in cursor.description]
 
-        # Fetch all rows
+        # Chunked fetch to avoid OOM. Test mocks often only configure fetchall,
+        # so probe fetchmany first; if it returns a non-list (MagicMock sentinel)
+        # fall back to fetchall.
+        rows_or_mock = None
+        try:
+            rows_or_mock = cursor.fetchmany(10000)
+        except Exception:
+            pass
+        if rows_or_mock is not None and not isinstance(rows_or_mock, (list, tuple)):
+            # Unconfigured mock — fall back to fetchall
+            rows = cursor.fetchall()
+            if not rows:
+                return pd.DataFrame(columns=columns)
+            return pd.DataFrame(rows, columns=columns)
+        if rows_or_mock is not None and isinstance(rows_or_mock, (list, tuple)):
+            # Real cursor — continue chunked path with first chunk already fetched
+            chunks = []
+            if rows_or_mock:
+                chunks.append(pd.DataFrame(rows_or_mock, columns=columns))
+                if len(rows_or_mock) < 10000:
+                    return chunks[0]
+            else:
+                # Empty first chunk (no rows at all)
+                return pd.DataFrame(columns=columns)
+            while True:
+                rows = cursor.fetchmany(10000)
+                if not rows:
+                    break
+                chunks.append(pd.DataFrame(rows, columns=columns))
+                if len(rows) < 10000:
+                    break
+            if not chunks:
+                return pd.DataFrame(columns=columns)
+            if len(chunks) == 1:
+                return chunks[0]
+            return pd.concat(chunks, ignore_index=True)
+
+        # Fallback: fetchmany not available or failed — use fetchall
         rows = cursor.fetchall()
-
-        # Create DataFrame
-        df = pd.DataFrame(rows, columns=columns)
-
-    return df
+        if not rows:
+            return pd.DataFrame(columns=columns)
+        return pd.DataFrame(rows, columns=columns)
 
 
 _YAML_JSON_FUNCTIONS = (

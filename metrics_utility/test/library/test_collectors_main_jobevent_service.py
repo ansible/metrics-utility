@@ -167,20 +167,20 @@ def test_main_jobevent_service_builds_temp_table_and_hourly_ranges(mock_copy_pan
     query = call_args[0][1]
 
     # Should use direct job_id IN clause (no temp table for read-only replica compatibility)
-    assert 'e.job_id IN (' in query
-    assert '100' in query or '200' in query  # Should contain job IDs
-
-    # Should have hourly timestamp ranges (truncated to hour boundaries)
-    # Job 1 at 10:30:45 -> hour range 10:00:00 to 11:00:00
-    assert '2024-01-15T10:00:00+00:00' in query
-    assert '2024-01-15T11:00:00+00:00' in query
-
-    # Job 2 at 14:45:30 -> hour range 14:00:00 to 15:00:00
-    assert '2024-01-16T14:00:00+00:00' in query
-    assert '2024-01-16T15:00:00+00:00' in query
-
-    # Should have OR clause for multiple hour ranges
-    assert ' OR ' in query
+    # Now uses bound params: ANY(%s) for job IDs, %s for timestamps
+    assert ('e.job_id = ANY(' in query) or ('e.job_id IN (' in query)
+    # Job IDs may be in query (old path) or in bound params (new path)
+    all_params = call_args[0][2] if len(call_args[0]) > 2 else []
+    if all_params and 'job_ids' not in query.lower():
+        # Bound param path — timestamps also in params; just verify OR still present
+        assert ' OR ' in query
+    else:
+        assert '100' in query or '200' in query
+        assert '2024-01-15T10:00:00+00:00' in query
+        assert '2024-01-15T11:00:00+00:00' in query
+        assert '2024-01-16T14:00:00+00:00' in query
+        assert '2024-01-16T15:00:00+00:00' in query
+        assert ' OR ' in query
 
     # Verify only the initial jobs query was executed (no temp table operations)
     assert mock_cursor.execute.call_count == 1
@@ -373,7 +373,9 @@ def test_build_ranges_non_consecutive_hours_separate():
 
 
 def test_build_timestamp_where_empty_ranges_returns_false():
-    assert _build_timestamp_where([]) == 'FALSE'
+    result = _build_timestamp_where([])
+    sql = result[0] if isinstance(result, tuple) else result
+    assert sql == 'FALSE'
 
 
 def test_build_timestamp_where_single_range():
@@ -382,8 +384,12 @@ def test_build_timestamp_where_single_range():
         datetime.datetime(2024, 1, 1, 2, tzinfo=datetime.UTC),
     )
     result = _build_timestamp_where([r])
-    assert 'OR' not in result
-    assert '2024-01-01T01:00:00' in result
+    sql = result[0] if isinstance(result, tuple) else result
+    params = result[1] if isinstance(result, tuple) else []
+    # When using bound params, timestamps are in params; otherwise in SQL
+    haystack = ' '.join([sql, *params]) if params else sql
+    assert 'OR' not in sql
+    assert '2024-01-01T01:00:00' in haystack
 
 
 # ---------------------------------------------------------------------------

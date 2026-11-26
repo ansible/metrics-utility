@@ -110,11 +110,20 @@ def _build_job_created_ranges(jobs):
 
 
 def _build_timestamp_where(ranges):
-    """Build a SQL OR-clause for partition pruning from a list of hour ranges."""
+    """Build a SQL OR-clause for partition pruning from a list of hour ranges.
+
+    Returns:
+        Tuple of (clause_sql, params) where clause_sql uses ``%s`` placeholders
+        and params is the flat list of bound values.
+    """
     if not ranges:
-        return 'FALSE'
-    clauses = [f"(e.job_created >= '{rs.isoformat()}'::timestamptz AND e.job_created < '{re.isoformat()}'::timestamptz)" for rs, re in ranges]
-    return ' OR '.join(clauses)
+        return 'FALSE', []
+    clauses = []
+    params: list = []
+    for rs, re in ranges:
+        clauses.append('(e.job_created >= %s::timestamptz AND e.job_created < %s::timestamptz)')
+        params.extend([rs.isoformat(), re.isoformat()])
+    return ' OR '.join(clauses), params
 
 
 @collector
@@ -157,13 +166,19 @@ def main_jobevent_service(*, db=None, since=None, until=None, row_limit=_DEFAULT
             len(jobs),
         )
 
-    # Build event query filters
+    # Build event query filters — use bound params for all user-derived values
     job_ids_set = {job_id for job_id, _ in jobs}
-    job_id_where_clause = f'e.job_id IN ({",".join(str(j) for j in job_ids_set)})' if job_ids_set else 'FALSE'
+    if job_ids_set:
+        job_id_where_clause = 'e.job_id = ANY(%s)'
+        job_id_params = [list(job_ids_set)]
+    else:
+        job_id_where_clause = 'FALSE'
+        job_id_params = []
 
     ranges = _build_job_created_ranges(jobs)
-    timestamp_where_clause = _build_timestamp_where(ranges)
+    timestamp_where_clause, timestamp_params = _build_timestamp_where(ranges)
 
+    # _RELEVANT_EVENTS is a hardcoded allow-list, safe for string interpolation
     event_types_str = ','.join(f"'{e}'" for e in _RELEVANT_EVENTS)
     where_clause = f'({timestamp_where_clause}) AND ({job_id_where_clause}) AND (e.event IN ({event_types_str}))'
 
@@ -242,7 +257,8 @@ def main_jobevent_service(*, db=None, since=None, until=None, row_limit=_DEFAULT
         {limit_clause}
     """
 
-    df = output.sql(db, query)
+    query_params = timestamp_params + job_id_params
+    df = output.sql(db, query, query_params or None)
 
     if row_limit is not None and len(df) >= row_limit:
         logger.info(

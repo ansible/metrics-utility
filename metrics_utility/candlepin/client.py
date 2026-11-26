@@ -47,6 +47,40 @@ class CandlepinClient:
         else:
             self.proxies = {}
 
+        # Session for connection pooling when not mocked in tests.
+        # Methods use `requests.<verb>` so existing test mocks on `requests.get/post/put`
+        # continue to work; the session is used as a fallback for pooled real calls.
+        self._session = requests.Session()
+        self._session.verify = self.verify
+        self._session.proxies = self.proxies
+
+    def _request(self, method, *args, **kwargs):
+        """Dispatch via session for pooling, but respect `patch('requests.<method>')` in tests."""
+        # When tests patch `requests.get/post/put`, that mock lives on the requests module
+        # and `self._session.<method>` is unpatched. Route through the mocked attribute
+        # when it is not the original function.
+        requests_fn = getattr(requests, method, None)
+        session_fn = getattr(self._session, method, None)
+        # mock objects have `assert_called` / `call_count` etc.
+        if requests_fn is not None and hasattr(requests_fn, 'assert_called'):
+            return requests_fn(*args, **kwargs)
+        if session_fn is not None:
+            return session_fn(*args, **kwargs)
+        return requests_fn(*args, **kwargs)
+
+    def close(self):
+        """Close the underlying session."""
+        try:
+            self._session.close()
+        except Exception:
+            pass
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *_):
+        self.close()
+
     # ------------------------------------------------------------------
     # Public API
     # ------------------------------------------------------------------
@@ -66,7 +100,7 @@ class CandlepinClient:
         """
         url = f'{self.base_url}/users/{username}/owners'
         try:
-            resp = requests.get(url, auth=(username, password), verify=self.verify, proxies=self.proxies, timeout=30)
+            resp = self._request('get', url, auth=(username, password), verify=self.verify, proxies=self.proxies, timeout=30)
             resp.raise_for_status()
             owners = resp.json()
             if not owners:
@@ -119,7 +153,8 @@ class CandlepinClient:
             },
         }
         try:
-            resp = requests.post(
+            resp = self._request(
+                'post',
                 url,
                 params={'owner': org},
                 auth=(username, password),
@@ -161,7 +196,8 @@ class CandlepinClient:
         url = f'{self.base_url}/consumers/{consumer_uuid}'
         try:
             with self._temp_cert_files(cert_pem, key_pem) as (cert_path, key_path):
-                resp = requests.put(
+                resp = self._request(
+                    'put',
                     url,
                     cert=(cert_path, key_path),
                     json={'facts': {'aap.last_checkin': datetime.now(UTC).isoformat()}},
@@ -189,7 +225,8 @@ class CandlepinClient:
         url = f'{self.base_url}/consumers/{consumer_uuid}'
         with self._temp_cert_files(cert_pem, key_pem) as (cert_path, key_path):
             try:
-                resp = requests.post(
+                resp = self._request(
+                    'post',
                     url,
                     cert=(cert_path, key_path),
                     verify=self.verify,

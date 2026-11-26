@@ -183,9 +183,9 @@ class DedupCCSP:
         serial_to_hosts = defaultdict(set)
         serial_to_first = {}
 
-        for _, row in df.iterrows():
-            host = row['host_name']
-            serials = row['serials']
+        for row in df.itertuples(index=False):
+            host = row.host_name
+            serials = row.serials
 
             if isinstance(serials, Iterable):
                 for serial in serials:

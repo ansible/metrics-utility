@@ -29,6 +29,7 @@ date_format_text = (
 )
 
 ALLOWED_EPHEMERAL_PATTERN = r'^\d+(d|day|days|m|mo|month|months)$'
+_ALLOWED_EPHEMERAL_RE = re.compile(ALLOWED_EPHEMERAL_PATTERN)
 
 # Constants for valid values
 MAX_GATHER_PERIOD_DAYS = 3650  # 10 years maximum
@@ -883,7 +884,7 @@ def validate_renewal_params(options, help_texts):
         raise MissingRequiredParameter('The --since parameter is required for renewal guidance report.')
 
     # validation
-    if opt_ephemeral and not re.match(ALLOWED_EPHEMERAL_PATTERN, opt_ephemeral):
+    if opt_ephemeral and not _ALLOWED_EPHEMERAL_RE.match(opt_ephemeral):
         raise UnparsableParameter(help_texts.get('ephemeral'))
 
 

@@ -57,94 +57,89 @@ class BaseDedupRenewal:
 
 
 class DedupRenewal(BaseDedupRenewal):
-    """Original deduplication logic with iterative relationship discovery."""
+    """Deduplication via union-find over shared identity keys.
+
+    Two rows are linked when they share any non-null value in one of
+    ``hostname``, ``ansible_host_variable``, ``ansible_product_serial``, or
+    ``ansible_machine_id``.  Connected components give the final groups,
+    replacing the previous O(n² · iterations) expand loop with O(n α(n)).
+    """
+
+    _DEDUP_KEYS = ('hostname', 'ansible_host_variable', 'ansible_product_serial', 'ansible_machine_id')
 
     def run(self):
-        # Check if dataframe is empty or missing required columns
         if self.dataframe is None or self.dataframe.empty:
             return {'host_metric': pd.DataFrame()}
 
         self._cleanup_null_values()
+        df = self.dataframe
+
+        # Build inverted index: value -> list of row positions for each key
+        # Then union-find over row positions
+        parent = list(range(len(df)))
+
+        def find(x):
+            while parent[x] != x:
+                parent[x] = parent[parent[x]]
+                x = parent[x]
+            return x
+
+        def union(a, b):
+            ra, rb = find(a), find(b)
+            if ra != rb:
+                parent[rb] = ra
+
+        for key in self._DEDUP_KEYS:
+            col = df[key]
+            # value -> first row index that had it
+            seen: dict = {}
+            for pos, val in enumerate(col):
+                if pd.isna(val):
+                    continue
+                if val in seen:
+                    union(seen[val], pos)
+                else:
+                    seen[val] = pos
+
+        # Connected components -> groups
+        from collections import defaultdict
+
+        groups: dict[int, list[int]] = defaultdict(list)
+        for pos in range(len(df)):
+            groups[find(pos)].append(pos)
+
         deduped_list = []
-        processed_dupes_index = set()
-
-        for index, row in self.dataframe.iterrows():
-            # Skip if index is in existing dupes_index
-            if index in processed_dupes_index:
-                continue
-
-            # Start with hostname matches
-            dupes = self.dataframe[self.dataframe['hostname'] == row['hostname']]
-
-            # Iterative search to cover indirect relationships
-            iterations = int(self.extra_params['report_renewal_guidance_dedup_iterations'])
-            for _i in range(iterations):
-                # Hostname dupe lookup
-                dupes = self.find_dupes(dupes, 'hostname', dupes['hostname'])
-
-                # Host variable dupe lookup
-                dupes = self.find_dupes(dupes, 'ansible_host_variable', dupes['ansible_host_variable'])
-
-                # Serial key dupes lookup
-                dupes = self.find_dupes(dupes, 'ansible_product_serial', dupes['ansible_product_serial'])
-
-                # ansible_machine_id key dupes lookup
-                dupes = self.find_dupes(dupes, 'ansible_machine_id', dupes['ansible_machine_id'])
-
-            processed_dupes_index.update(dupes['index'])
+        for indices in groups.values():
+            dupes = df.iloc[indices]
             latest_hostname = self._get_latest_hostname(dupes)
             deduped_list.append(self._build_deduped_record(dupes, latest_hostname))
 
         return {'host_metric': pd.DataFrame(deduped_list)}
 
     def find_dupes(self, dupes, key, values):
-        """Find additional duplicates based on a specific key and values."""
+        """Kept for backwards compatibility with external callers / tests."""
         next_iteration_dupes = self.dataframe[self.dataframe[key].notnull() & self.dataframe[key].isin(values)]
         dupes = pd.concat([dupes, next_iteration_dupes]).drop_duplicates().reset_index(drop=True)
         return dupes
 
 
 class DedupRenewalHostname(BaseDedupRenewal):
-    """
-    Hostname-based deduplication for renewal guidance that mirrors CCSP logic.
-    Uses ansible_host_variable || hostname for deduplication, similar to CCSP.
-    """
+    """Hostname-based deduplication (ansible_host_variable || hostname)."""
 
     def run(self):
-        # Check if dataframe is empty or missing required columns
         if self.dataframe is None or self.dataframe.empty:
             return {'host_metric': pd.DataFrame()}
 
-        # Ensure required columns exist
         if 'ansible_host_variable' not in self.dataframe.columns:
             self.dataframe['ansible_host_variable'] = None
 
         self._cleanup_null_values()
-
-        # Apply hostname normalization logic similar to CCSP:
-        # ansible_host_variable || hostname
         self.dataframe['normalized_hostname'] = self.dataframe['ansible_host_variable'].fillna(self.dataframe['hostname'])
 
         deduped_list = []
-        processed_dupes_index = set()
-
-        for index, row in self.dataframe.iterrows():
-            # Skip if index is in existing dupes_index
-            if index in processed_dupes_index:
-                continue
-
-            # Find duplicates based on normalized hostname only
-            dupes = self.dataframe[self.dataframe['normalized_hostname'] == row['normalized_hostname']]
-            processed_dupes_index.update(dupes['index'])
-
+        for _, dupes in self.dataframe.groupby('normalized_hostname', dropna=False):
             latest_hostname = self._get_latest_hostname(dupes)
-
-            # Clean up product serial and machine ID for consistent output
-            dupes_clean = dupes.copy()
-            dupes_clean['ansible_product_serial'] = dupes_clean['ansible_product_serial'].replace('NA', None).replace('', None)
-            dupes_clean['ansible_machine_id'] = dupes_clean['ansible_machine_id'].replace('NA', None).replace('', None)
-
-            deduped_list.append(self._build_deduped_record(dupes, latest_hostname, dupes_clean))
+            deduped_list.append(self._build_deduped_record(dupes, latest_hostname))
 
         return {'host_metric': pd.DataFrame(deduped_list)}
 

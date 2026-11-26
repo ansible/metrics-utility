@@ -57,7 +57,7 @@ class ReportRenewalGuidance(Base):
         host_metric_dataframe = self.dataframes['host_metric']
 
         host_metric_dataframe['days_automated'] = (host_metric_dataframe['last_automation'] - host_metric_dataframe['first_automation']).dt.days
-        host_metric_dataframe['days_automated'] = host_metric_dataframe['days_automated'].apply(lambda x: max(0, x))
+        host_metric_dataframe['days_automated'] = host_metric_dataframe['days_automated'].clip(lower=0)
 
         ephemeral_usage_dataframe = None
         if self.ephemeral_days:
