@@ -11,6 +11,10 @@ from metrics_utility.exceptions import MetricsException
 from metrics_utility.logger import logger
 
 
+_LEGACY_TARBALL_RE = re.compile(r'-\d+\.tar\.gz$')
+_COLLECTION_TARBALL_RE = re.compile(r'-\d+-\w+\.tar\.gz$')
+
+
 _main_host_sheets = [
     'inventory_scope',
     'jobs',
@@ -218,22 +222,23 @@ class Base:
         if 'config' in collections:
             raise MetricsException('config is not a valid tarball name filter')
 
+        needles = tuple(f'-{key}.' for key in collections)
+
         def match(s):
             # include all files produced by 0.6.0 and lower, and anything with an unexpected name
-            if re.search(r'-\d+.tar.gz$', s):
+            if _LEGACY_TARBALL_RE.search(s):
                 return True
-            if re.search(r'-\d+-\w+.tar.gz$', s) is None:
+            if _COLLECTION_TARBALL_RE.search(s) is None:
                 return True
 
             # should not happen, but make sure we're not ignoring data if it does
-            if s.find('-unknown.') or s.find('-config.'):
+            if '-unknown.' in s or '-config.' in s:
                 return True
 
             # match against collections
-            return any(s.find(f'-{key}.') != -1 for key in collections)
+            return any(needle in s for needle in needles)
 
-        paths = filter(match, paths)
-        return list(paths)
+        return list(filter(match, paths))
 
 
 def _write_member(member_path, file_obj, max_size, total_extracted_size):
@@ -267,9 +272,11 @@ def _safe_extract(tar_path, extract_path, max_files=100, max_size=1024 * 1024 * 
 
     # Ensure the extraction directory exists
     os.makedirs(extract_path, exist_ok=True)
+    extract_path_abs = os.path.abspath(extract_path)
 
     with tarfile.open(tar_path, 'r:*') as tar:
-        for member in tar.getmembers():
+        # Stream members in one pass to avoid rewinding gzip archives.
+        for member in tar:
             # Skip directories and links
             if member.isdir():
                 continue
@@ -288,7 +295,6 @@ def _safe_extract(tar_path, extract_path, max_files=100, max_size=1024 * 1024 * 
 
             # Build a fully qualified path for this member and ensure it stays within extract_path
             member_path = os.path.abspath(os.path.join(extract_path, member.name))
-            extract_path_abs = os.path.abspath(extract_path)
             if not member_path.startswith(extract_path_abs + os.sep):
                 logger.warning(f'Skipping potentially unsafe file (path traversal): {member.name}')
                 continue

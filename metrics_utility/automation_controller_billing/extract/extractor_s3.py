@@ -60,7 +60,6 @@ class ExtractorS3(Base):
         Returns:
             List of S3 key strings matching the requested collections.
         """
-        # FIXME: apply collections= filtering, so we don't download files from S3 if we know they don't have the right thing
         prefix = self.get_path_prefix(date)
         paths = self.s3_handler.list_files(prefix)
 

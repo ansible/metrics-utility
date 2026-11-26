@@ -8,7 +8,12 @@ import tempfile
 
 import pytest
 
-from metrics_utility.automation_controller_billing.extract.base import Base, _safe_extract
+from metrics_utility.automation_controller_billing.extract.base import (
+    _COLLECTION_TARBALL_RE,
+    _LEGACY_TARBALL_RE,
+    Base,
+    _safe_extract,
+)
 from metrics_utility.exceptions import MetricsException
 
 
@@ -165,6 +170,77 @@ class TestFilterTarballPaths:
         result = ext.filter_tarball_paths(paths, ['main_host'])
         assert isinstance(result, list)
 
+    # A modern tarball for a different collection must NOT be included
+    def test_modern_tarball_for_other_collection_is_excluded(self):
+        ext = self._ext()
+        paths = [
+            '/data/2024/01/01/uuid-0-main_jobevent.tar.gz',
+            '/data/2024/01/01/uuid-1-main_host.tar.gz',
+        ]
+        result = ext.filter_tarball_paths(paths, ['main_host'])
+        assert result == ['/data/2024/01/01/uuid-1-main_host.tar.gz']
+
+    def test_multiple_collections_filter(self):
+        ext = self._ext()
+        paths = [
+            '/data/uuid-0-job_host_summary.tar.gz',
+            '/data/uuid-1-main_indirectmanagednodeaudit.tar.gz',
+            '/data/uuid-2-main_host.tar.gz',
+            '/data/uuid-3-main_jobevent.tar.gz',
+        ]
+        result = ext.filter_tarball_paths(paths, ['job_host_summary', 'main_indirectmanagednodeaudit'])
+        assert result == [
+            '/data/uuid-0-job_host_summary.tar.gz',
+            '/data/uuid-1-main_indirectmanagednodeaudit.tar.gz',
+        ]
+
+    # Unknown / config suffixes are kept even when not requested
+    def test_unknown_suffix_is_included_regardless_of_collections(self):
+        ext = self._ext()
+        paths = ['/data/uuid-1-unknown.tar.gz']
+        assert ext.filter_tarball_paths(paths, ['main_host']) == paths
+
+    def test_config_suffix_is_included_regardless_of_collections(self):
+        ext = self._ext()
+        paths = ['/data/uuid-1-config.tar.gz']
+        assert ext.filter_tarball_paths(paths, ['main_host']) == paths
+
+    # Unexpected / non-standard filenames are kept so no data is lost
+    def test_unexpected_filenames_are_included(self):
+        ext = self._ext()
+        paths = [
+            '/data/source_tarball',
+            '/data/custom_archive.tar.gz',
+            '/data/nested/dir/whatever.tgz',
+        ]
+        assert ext.filter_tarball_paths(paths, ['main_host']) == paths
+
+    # Legacy (0.6.0 and lower) numeric-suffix tarballs are kept
+    def test_legacy_numeric_suffix_included_alongside_modern_filter(self):
+        ext = self._ext()
+        paths = [
+            '/data/uuid-0.tar.gz',
+            '/data/uuid-1-main_jobevent.tar.gz',
+        ]
+        assert ext.filter_tarball_paths(paths, ['main_host']) == ['/data/uuid-0.tar.gz']
+
+    def test_dots_in_extension_are_literal(self):
+        ext = self._ext()
+        weird = '/data/uuid-0XtarXgz'
+        # Wildcard dots would make this look like a legacy numeric tarball.
+        assert _LEGACY_TARBALL_RE.search(weird) is None
+        assert _COLLECTION_TARBALL_RE.search(weird) is None
+        # Not recognised → treated as an unexpected name and always kept.
+        assert ext.filter_tarball_paths([weird], ['main_host']) == [weird]
+
+    def test_wildcard_dots_would_have_matched_a_collection(self):
+        ext = self._ext()
+        # With unescaped dots this parses as "-0-main_host" + ".tar.gz" and
+        # would be filtered out for a non-matching collection.
+        weird = '/data/uuid-0-main_hostXtarXgz'
+        assert _COLLECTION_TARBALL_RE.search(weird) is None
+        assert ext.filter_tarball_paths([weird], ['main_jobevent']) == [weird]
+
 
 # ---------------------------------------------------------------------------
 # _safe_extract (module-level function)
@@ -251,3 +327,70 @@ class TestSafeExtract:
             extract_dir = os.path.join(tmpdir, 'out')
             with pytest.raises(ValueError, match='Maximum total size exceeded'):
                 _safe_extract(tar_path, extract_dir, max_size=100)
+
+    def test_multi_member_enabled_set_extracts_members_after_skipped_ones(self):
+        """Single-pass iteration keeps every wanted member, even after skips."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tar_path = os.path.join(tmpdir, 'test.tar.gz')
+            _make_tarball(
+                tar_path,
+                [
+                    ('skipped.csv', 'a\n1\n'),
+                    ('main_host.csv', 'col\nval\n'),
+                    ('ignored.sh', '#!/bin/sh'),
+                    ('main_jobevent.csv', 'x\n1\n'),
+                    ('config.json', '{"k": "v"}'),
+                    ('main_host_daily.csv', 'col\nval\n'),
+                ],
+            )
+
+            extract_dir = os.path.join(tmpdir, 'out')
+            _safe_extract(tar_path, extract_dir, enabled_set=['main_host', 'main_jobevent', 'config'])
+
+            assert not os.path.exists(os.path.join(extract_dir, 'skipped.csv'))
+            assert not os.path.exists(os.path.join(extract_dir, 'ignored.sh'))
+            assert not os.path.exists(os.path.join(extract_dir, 'main_host_daily.csv'))
+
+            with open(os.path.join(extract_dir, 'main_host.csv')) as f:
+                assert f.read() == 'col\nval\n'
+            with open(os.path.join(extract_dir, 'main_jobevent.csv')) as f:
+                assert f.read() == 'x\n1\n'
+            with open(os.path.join(extract_dir, 'config.json')) as f:
+                assert f.read() == '{"k": "v"}'
+
+    def test_path_traversal_is_blocked(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tar_path = os.path.join(tmpdir, 'test.tar.gz')
+            _make_tarball(
+                tar_path,
+                [
+                    ('../evil.csv', 'bad\n1\n'),
+                    ('main_host.csv', 'col\nval\n'),
+                ],
+            )
+
+            extract_dir = os.path.join(tmpdir, 'out')
+            _safe_extract(tar_path, extract_dir)
+
+            assert os.path.exists(os.path.join(extract_dir, 'main_host.csv'))
+            assert not os.path.exists(os.path.join(tmpdir, 'evil.csv'))
+
+    def test_symlinks_are_skipped(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tar_path = os.path.join(tmpdir, 'test.tar.gz')
+            with tarfile.open(tar_path, 'w:gz') as tar:
+                data = b'col\nval\n'
+                info = tarfile.TarInfo(name='main_host.csv')
+                info.size = len(data)
+                tar.addfile(info, io.BytesIO(data))
+
+                link = tarfile.TarInfo(name='link.csv')
+                link.type = tarfile.SYMTYPE
+                link.linkname = 'main_host.csv'
+                tar.addfile(link)
+
+            extract_dir = os.path.join(tmpdir, 'out')
+            _safe_extract(tar_path, extract_dir)
+
+            assert os.path.exists(os.path.join(extract_dir, 'main_host.csv'))
+            assert not os.path.lexists(os.path.join(extract_dir, 'link.csv'))
