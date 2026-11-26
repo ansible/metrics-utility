@@ -75,7 +75,8 @@ class DataframeInventoryScope(Base):
                 billing_data['last_automation'] = pd.to_datetime(billing_data['last_automation'], format='ISO8601').dt.tz_localize(None)
 
                 # Batches are non-empty here (skipped above) and canonical_facts
-                # is a single column, so the column can be read directly.
+                # is a single column; parse once for both serial_from_facts() and group().
+                billing_data['canonical_facts'] = [parse_json(v) for v in billing_data['canonical_facts']]
                 billing_data['serial'] = billing_data['canonical_facts'].map(serial_from_facts)
 
                 experimental_dedup = self.extra_params.get('deduplicator') == 'ccsp-experimental'

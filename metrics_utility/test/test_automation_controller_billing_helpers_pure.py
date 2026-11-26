@@ -155,6 +155,58 @@ class TestMergeJsonSets:
         result = merge_json_sets(values)
         assert result == {'ports': {(80, 443)}}
 
+    def test_nested_tuple_values_are_hashable(self):
+        result = merge_json_sets([{'ports': (80, 443)}, {'ports': (22,)}])
+        assert result == {'ports': {(80, 443), (22,)}}
+
+    def test_frozenset_values_are_hashable(self):
+        result = merge_json_sets([{'groups': frozenset({'a', 'b'})}, {'groups': frozenset({'b', 'c'})}])
+        assert result == {'groups': {frozenset({'a', 'b'}), frozenset({'b', 'c'})}}
+
+    def test_deeply_nested_structures_are_hashable(self):
+        values = [
+            {'tags': {'nested': {'list': [1, {'deep': 'x'}]}}},
+            {'tags': {'nested': {'list': [1, {'deep': 'x'}]}}},
+        ]
+        result = merge_json_sets(values)
+        assert len(result['tags']) == 1
+        (value,) = result['tags']
+        assert isinstance(value, HashableDict)
+        assert json.loads(json.dumps(value)) == {'nested': {'list': [1, {'deep': 'x'}]}}
+
+    def test_set_values_do_not_mutate_input(self):
+        first = {'x', 'y'}
+        second = {'y', 'z'}
+        merge_json_sets([{'key': first}, {'key': second}])
+        assert first == {'x', 'y'}
+        assert second == {'y', 'z'}
+
+    def test_single_set_value_is_copied(self):
+        original = {'x', 'y'}
+        result = merge_json_sets([{'key': original}])
+        assert result['key'] == {'x', 'y'}
+        assert result['key'] is not original
+        result['key'].add('z')
+        assert original == {'x', 'y'}
+
+    def test_input_dicts_are_not_mutated(self):
+        first = {'a': 'x', 'nested': {'k': 1}}
+        second = {'a': 'y', 'items': [1, 2]}
+        result = merge_json_sets([first, second])
+        assert first == {'a': 'x', 'nested': {'k': 1}}
+        assert second == {'a': 'y', 'items': [1, 2]}
+        assert result == {'a': {'x', 'y'}, 'nested': {HashableDict({'k': 1})}, 'items': {(1, 2)}}
+
+    def test_mixed_string_and_dict_inputs_parity(self):
+        """The pre-parsed dict fast path must match the JSON-string path exactly."""
+        as_strings = ['{"a": "x"}', '{"a": "y"}', '{"b": {"c": [1]}}']
+        as_dicts = [json.loads(v) for v in as_strings]
+        assert merge_json_sets(as_strings) == merge_json_sets(as_dicts)
+
+    def test_scalar_types_are_preserved(self):
+        result = merge_json_sets([{'i': 1, 'f': 1.5, 'b': True, 's': 'x'}])
+        assert result == {'i': {1}, 'f': {1.5}, 'b': {True}, 's': {'x'}}
+
 
 # ---------------------------------------------------------------------------
 # make_hashable / HashableDict
