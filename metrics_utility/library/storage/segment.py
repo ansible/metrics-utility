@@ -64,9 +64,22 @@ class StorageSegment:
         if not self.write_key:
             logger.info('StorageSegment: write_key not set. Analytics will be disabled.')
 
-    def _build_properties(self, artifact_name, data, chunk_number, total_chunks, chunk_size, version='v1'):
-        """Build the Segment properties object for one artifact chunk."""
-        data = self._serialize_value(data)
+    def _build_properties(self, artifact_name, data, chunk_number, total_chunks, chunk_size, version='v1', *, _already_serialized=False):
+        """Build the Segment properties object for one artifact chunk.
+
+        Args:
+            artifact_name: Name of the artifact being sent.
+            data: The chunk payload. Serialized unless ``_already_serialized``
+                is set, which lets internal callers skip a redundant deep walk.
+            chunk_number: 1-based index of this chunk.
+            total_chunks: Total number of chunks in the artifact.
+            chunk_size: Serialized size of ``data`` in JSON bytes.
+            version: Event schema version recorded in the properties.
+            _already_serialized: Private optimization flag; when true ``data``
+                is assumed to be the output of :meth:`_serialize_value`.
+        """
+        if not _already_serialized:
+            data = self._serialize_value(data)
         return {
             'artifact_name': artifact_name,
             'data': data,
@@ -129,7 +142,7 @@ class StorageSegment:
     def _build_event(self, artifact_name, event_name, anonymous_id, chunk, chunk_number, total_chunks, segment_meta):
         """Build one deterministic Segment track event from an artifact chunk."""
         chunk = self._serialize_value(chunk)
-        chunk_size = self._calculate_size(chunk)
+        chunk_size = len(self._json_bytes(chunk))
         timestamp = self._canonicalize_timestamp(segment_meta['timestamp'])
         version = segment_meta.get('version') or 'v1'
         base_message_id = segment_meta.get('message_id') or f'{artifact_name}:{event_name}:{anonymous_id}:{timestamp}'
@@ -143,7 +156,7 @@ class StorageSegment:
             'timestamp': timestamp,
             'context': self._serialize_value(segment_meta.get('context', {})),
             'integrations': self._serialize_value(segment_meta.get('integrations', {})),
-            'properties': self._build_properties(artifact_name, chunk, chunk_number, total_chunks, chunk_size, version),
+            'properties': self._build_properties(artifact_name, chunk, chunk_number, total_chunks, chunk_size, version, _already_serialized=True),
         }
         user_id = segment_meta.get('user_id') or self.user_id
         if user_id and user_id != 'unknown':
@@ -216,22 +229,28 @@ class StorageSegment:
                 chunks.append(chunk)
 
             elif isinstance(value, list):
-                active_chunk = {key: []}
+                # Compact JSON has no spaces, so each additional item adds item_size + 1 comma byte.
+                base_size = self._calculate_size({key: []})
+                active_items = []
+                active_size = base_size
 
                 for item in value:
-                    trial = {key: active_chunk[key] + [item]}
-                    if self._calculate_size(trial) > max_size:
-                        if len(active_chunk[key]) > 0:
-                            chunks.append(active_chunk)
-                            active_chunk = {key: [item]}
+                    item_size = self._calculate_size(item)
+                    added_size = item_size + (1 if active_items else 0)
+                    if active_size + added_size > max_size:
+                        if active_items:
+                            chunks.append({key: active_items})
+                            active_items = [item]
+                            active_size = base_size + item_size
                         else:
                             logger.warning('Single list item in key %r exceeds %d byte limit', key, max_size)
                             chunks.append({key: [item]})
                     else:
-                        active_chunk[key].append(item)
+                        active_items.append(item)
+                        active_size += added_size
 
-                if len(active_chunk[key]) > 0:
-                    chunks.append(active_chunk)
+                if active_items:
+                    chunks.append({key: active_items})
 
             else:
                 chunk = {key: value}

@@ -13,6 +13,34 @@ from metrics_utility.library.storage.segment import StorageSegment
 from metrics_utility.test.library.testing_data_for_segment import segment_data, segment_data_large
 
 
+class ExampleState(Enum):
+    READY = 'ready'
+    DONE = 'done'
+
+
+def reference_split_into_chunks(storage_segment, data, max_size):
+    """Naive O(K^2) list splitter kept as the behavioural reference."""
+    chunks = []
+    for key, value in data.items():
+        if isinstance(value, list):
+            active_chunk = {key: []}
+            for item in value:
+                trial = {key: active_chunk[key] + [item]}
+                if storage_segment._calculate_size(trial) > max_size:
+                    if len(active_chunk[key]) > 0:
+                        chunks.append(active_chunk)
+                        active_chunk = {key: [item]}
+                    else:
+                        chunks.append({key: [item]})
+                else:
+                    active_chunk[key].append(item)
+            if len(active_chunk[key]) > 0:
+                chunks.append(active_chunk)
+        else:
+            chunks.append({key: value})
+    return chunks or [data]
+
+
 class TestStorageSegmentAvailable:
     def test_correct_splitting_for_small_data(self):
         """Split the standard fixture into one chunk per top-level section."""
@@ -489,3 +517,202 @@ class TestStorageSegmentAvailable:
 
         payload = json.loads(gzip.decompress(mock_post.call_args.kwargs['data']))
         assert payload['batch'][0]['userId'] == 'meta-id'
+
+
+class TestSplitIntoChunksIncrementalSizing:
+    """Boundary and parity coverage for the incremental list chunk sizing."""
+
+    @staticmethod
+    def _exact_size(storage_segment, key, items):
+        return storage_segment._calculate_size({key: items})
+
+    def test_exact_boundary_size_keeps_single_chunk(self):
+        """Keep the whole list when max_size equals the exact serialized size."""
+        storage_segment = StorageSegment()
+        items = ['aa', 'bbb', 'c']
+        exact = self._exact_size(storage_segment, 'items', items)
+
+        chunks = storage_segment._split_into_chunks({'items': items}, exact)
+
+        assert len(chunks) == 1
+        assert chunks[0]['items'] == items
+        assert storage_segment._calculate_size(chunks[0]) == exact
+
+    def test_one_byte_below_exact_size_splits(self):
+        """Split when max_size is one byte short of the exact serialized size."""
+        storage_segment = StorageSegment()
+        items = ['aa', 'bbb', 'c']
+        exact = self._exact_size(storage_segment, 'items', items)
+
+        chunks = storage_segment._split_into_chunks({'items': items}, exact - 1)
+
+        assert len(chunks) > 1
+        assert [item for chunk in chunks for item in chunk['items']] == items
+        assert all(storage_segment._calculate_size(chunk) <= exact - 1 for chunk in chunks)
+
+    def test_one_byte_above_exact_size_keeps_single_chunk(self):
+        """Keep the whole list when max_size is one byte above the exact size."""
+        storage_segment = StorageSegment()
+        items = ['aa', 'bbb', 'c']
+        exact = self._exact_size(storage_segment, 'items', items)
+
+        chunks = storage_segment._split_into_chunks({'items': items}, exact + 1)
+
+        assert len(chunks) == 1
+        assert chunks[0]['items'] == items
+
+    def test_boundaries_use_utf8_byte_lengths(self):
+        """Measure multi-byte keys and values in UTF-8 bytes, not characters."""
+        storage_segment = StorageSegment()
+        key = 'clé_😀'
+        items = ['héllo', '漢字', '😀😀']
+        exact = self._exact_size(storage_segment, key, items)
+
+        # Character counts are much smaller than the UTF-8 byte length.
+        character_length = len(json.dumps({key: items}, separators=(',', ':'), ensure_ascii=False))
+        assert exact > character_length
+        assert len(storage_segment._split_into_chunks({key: items}, exact)) == 1
+        assert len(storage_segment._split_into_chunks({key: items}, exact + 1)) == 1
+
+        tighter = storage_segment._split_into_chunks({key: items}, exact - 1)
+        assert len(tighter) > 1
+        assert [item for chunk in tighter for item in chunk[key]] == items
+        assert all(storage_segment._calculate_size(chunk) <= exact - 1 for chunk in tighter)
+
+    def test_multi_byte_items_fill_chunks_exactly(self):
+        """Pack multi-byte items right up to the limit using exact byte sizes."""
+        storage_segment = StorageSegment()
+        items = ['😀', 'é', '漢字', 'ok']
+        key = 'items'
+        base = self._exact_size(storage_segment, key, [])
+
+        # Room for exactly the first two items (with separators).
+        first_two = base + storage_segment._calculate_size('😀') + 1 + storage_segment._calculate_size('é')
+        chunks = storage_segment._split_into_chunks({key: items}, first_two)
+
+        assert chunks[0][key] == ['😀', 'é']
+        assert storage_segment._calculate_size(chunks[0]) == first_two
+        assert len(chunks) > 1
+
+    def test_splits_serialized_non_json_native_items(self):
+        """Account for serialized lengths of datetime, date, Decimal, Enum, and set items."""
+        storage_segment = StorageSegment()
+        items = [
+            datetime.datetime(2026, 1, 1, 12, 30, tzinfo=datetime.UTC),
+            datetime.date(2026, 1, 2),
+            Decimal('1.25'),
+            ExampleState.READY,
+            {'label': 'é'},
+        ]
+        exact = self._exact_size(storage_segment, 'events', items)
+
+        assert len(storage_segment._split_into_chunks({'events': items}, exact)) == 1
+        split = storage_segment._split_into_chunks({'events': items}, exact - 1)
+        assert len(split) > 1
+        assert [item for chunk in split for item in chunk['events']] == items
+        assert all(storage_segment._calculate_size(chunk) <= exact - 1 for chunk in split)
+
+    def test_oversized_single_item_at_list_start(self, caplog):
+        """Warn once and emit an oversized leading item as its own chunk."""
+        storage_segment = StorageSegment()
+        oversized = 'x' * 500
+        chunks = storage_segment._split_into_chunks({'items': [oversized, 'a', 'b']}, 50)
+
+        assert chunks[0]['items'] == [oversized]
+        assert chunks[1]['items'] == ['a', 'b']
+        assert caplog.text.count('Single list item') == 1
+
+    def test_oversized_item_after_non_empty_chunk(self, caplog):
+        """Flush the active chunk then emit the oversized item, without warning."""
+        storage_segment = StorageSegment()
+        oversized = 'x' * 500
+        chunks = storage_segment._split_into_chunks({'items': ['a', 'b', oversized, 'c']}, 50)
+
+        assert chunks == [{'items': ['a', 'b']}, {'items': [oversized]}, {'items': ['c']}]
+        assert 'Single list item' not in caplog.text
+
+    def test_oversized_shared_payload_preserved(self, caplog):
+        """Emit oversized items without truncation and keep every item in order."""
+        storage_segment = StorageSegment()
+        data = {'items': [{'payload': 'y' * 200}], 'other': [{'payload': 'z' * 200}]}
+        chunks = storage_segment._split_into_chunks(data, 60)
+
+        assert [chunk['items'][0]['payload'] for chunk in chunks if 'items' in chunk] == ['y' * 200]
+        assert [chunk['other'][0]['payload'] for chunk in chunks if 'other' in chunk] == ['z' * 200]
+        assert caplog.text.count('Single list item') == 2
+
+    @pytest.mark.parametrize(
+        'items',
+        [
+            [f'item{i}' for i in range(40)],
+            ['😀', 'é', '漢字', 'ascii', 'x' * 40] * 6,
+            [{'i': i, 'label': 'é😀'} for i in range(30)],
+            [datetime.date(2026, 1, (i % 28) + 1) for i in range(20)],
+            [Decimal(f'{i}.5') for i in range(20)],
+            [ExampleState.READY if i % 2 else ExampleState.DONE for i in range(20)],
+            [1, 'two', None, True, 2.5, ['nested', '😀'], {'k': 'v'}] * 8,
+            ['x' * 30, 'y' * 30] * 10,
+        ],
+    )
+    def test_matches_reference_split_and_incremental_sizes(self, items):
+        """Match the naive reference split and the tracked incremental sizes."""
+        storage_segment = StorageSegment()
+        key = 'items'
+        base = self._exact_size(storage_segment, key, [])
+        item_sizes = [storage_segment._calculate_size(item) for item in items]
+        total = base + sum(item_sizes) + max(len(items) - 1, 0)
+
+        for max_size in (total, total - 1, total // 2, total // 3, total // 5, 60, 100, 200):
+            if max_size <= 0:
+                continue
+            chunks = storage_segment._split_into_chunks({key: items}, max_size)
+            assert chunks == reference_split_into_chunks(storage_segment, {key: items}, max_size)
+
+            # Every non-oversized chunk matches base + items + separators exactly.
+            for chunk in chunks:
+                chunk_items = chunk[key]
+                expected = base + sum(storage_segment._calculate_size(item) for item in chunk_items)
+                expected += max(len(chunk_items) - 1, 0)
+                assert storage_segment._calculate_size(chunk) == expected
+                if len(chunk_items) == 1:
+                    continue
+                assert storage_segment._calculate_size(chunk) <= max_size
+
+    def test_incremental_size_matches_after_oversized_item(self):
+        """Keep exact size accounting after an oversized item resets the chunk."""
+        storage_segment = StorageSegment()
+        key = 'items'
+        items = ['a', 'x' * 500, 'b', 'c']
+        chunks = storage_segment._split_into_chunks({key: items}, 50)
+
+        assert [chunk[key] for chunk in chunks] == [['a'], ['x' * 500], ['b', 'c']]
+        base = self._exact_size(storage_segment, key, [])
+        last = chunks[-1][key]
+        expected = base + sum(storage_segment._calculate_size(item) for item in last) + len(last) - 1
+        assert storage_segment._calculate_size(chunks[-1]) == expected
+
+    @patch('metrics_utility.library.storage.segment.requests.post')
+    def test_build_event_reports_serialized_chunk_size(self, mock_post):
+        """Report the serialized chunk size and serialize properties data once."""
+        mock_post.return_value = Mock(status_code=200, text='')
+        storage_segment = StorageSegment(write_key='test_write_key')
+        chunk = {'metrics': {'value': Decimal('1.25'), 'labels': ['é', '😀']}}
+
+        storage_segment.put(artifact_name='test_artifact', dict=chunk)
+
+        event = json.loads(gzip.decompress(mock_post.call_args.kwargs['data']))['batch'][0]
+        assert event['properties']['chunk_info']['chunk_size'] == len(storage_segment._json_bytes(event['properties']['data']))
+        assert event['properties']['data'] == {'metrics': {'value': 1.25, 'labels': ['é', '😀']}}
+
+    def test_build_properties_serializes_data_by_default(self):
+        """Direct callers of _build_properties still get value serialization by default."""
+        storage_segment = StorageSegment()
+        props = storage_segment._build_properties(
+            artifact_name='test_artifact',
+            data={'amount': Decimal('2.50'), 'day': datetime.date(2026, 11, 26)},
+            chunk_number=1,
+            total_chunks=1,
+            chunk_size=42,
+        )
+
+        assert props['data'] == {'amount': 2.5, 'day': '2026-11-26'}
