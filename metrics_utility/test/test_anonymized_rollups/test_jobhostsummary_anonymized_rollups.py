@@ -483,6 +483,40 @@ def test_aggregate_by_job_remote_id_without_normalization():
     assert result['unreachable_hosts_total'].tolist() == [1]
 
 
+@pytest.mark.parametrize(
+    ('supplied', 'expected'),
+    [
+        ('failed', (0, 1, 0)),
+        ('unreachable', (0, 0, 1)),
+    ],
+)
+def test_aggregate_by_job_remote_id_keeps_supplied_host_outcome(supplied, expected):
+    """A caller-supplied ``host_outcome`` wins over zeroed raw counters."""
+    rollup = JobHostSummaryAnonymizedRollup()
+    dataframe = pd.DataFrame(_outcome_rows(['successful']))
+    dataframe['host_outcome'] = [supplied]
+
+    result = rollup._aggregate_by_job_remote_id(dataframe)
+
+    assert result['successful_hosts_total'].tolist() == [expected[0]]
+    assert result['failed_hosts_total'].tolist() == [expected[1]]
+    assert result['unreachable_hosts_total'].tolist() == [expected[2]]
+
+
+def test_normalize_dataframe_overrides_stale_host_outcome():
+    """Normalization always recomputes ``host_outcome`` from the counters."""
+    rollup = JobHostSummaryAnonymizedRollup()
+    dataframe = pd.DataFrame(_outcome_rows(['successful', 'failed', 'unreachable']))
+    dataframe['host_outcome'] = ['failed', 'successful', 'successful']
+
+    dataframe = rollup._normalize_dataframe(dataframe)
+
+    assert dataframe['host_outcome'].tolist() == ['successful', 'failed', 'unreachable']
+    assert dataframe['is_successful'].tolist() == [1, 0, 0]
+    assert dataframe['is_failed'].tolist() == [0, 1, 0]
+    assert dataframe['is_unreachable'].tolist() == [0, 0, 1]
+
+
 def test_prepare_without_job_remote_id_keeps_pairs_and_host_ids():
     """Missing ``job_remote_id`` must not crash; pairs and host ids are still reported."""
     rollup = JobHostSummaryAnonymizedRollup()

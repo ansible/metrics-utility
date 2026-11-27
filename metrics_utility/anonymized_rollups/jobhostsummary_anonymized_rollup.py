@@ -209,23 +209,36 @@ class JobHostSummaryAnonymizedRollup(BaseAnonymizedRollup):
         # Compute host_outcome and flag columns
         return self._add_outcome_columns(dataframe)
 
-    def _add_outcome_columns(self, dataframe):
-        """Compute ``host_outcome`` and int8 outcome flags for groupby sums."""
+    def _classify_host_outcome(self, dataframe):
+        """Derive ``host_outcome`` from the raw ``failures``/``dark`` counters."""
         dataframe['host_outcome'] = 'successful'
         dataframe.loc[dataframe['failures'] > 0, 'host_outcome'] = 'failed'
         dataframe.loc[dataframe['dark'] > 0, 'host_outcome'] = 'unreachable'
+        return dataframe
 
+    def _add_outcome_flags(self, dataframe):
+        """Derive the int8 outcome flags from the ``host_outcome`` column."""
         dataframe['is_successful'] = (dataframe['host_outcome'] == 'successful').astype('int8')
         dataframe['is_failed'] = (dataframe['host_outcome'] == 'failed').astype('int8')
         dataframe['is_unreachable'] = (dataframe['host_outcome'] == 'unreachable').astype('int8')
-
         return dataframe
+
+    def _add_outcome_columns(self, dataframe):
+        """Recompute ``host_outcome`` and int8 outcome flags for groupby sums."""
+        dataframe = self._classify_host_outcome(dataframe)
+        return self._add_outcome_flags(dataframe)
 
     def _ensure_outcome_columns(self, dataframe):
-        """Add outcome flag columns if a caller skipped ``_normalize_dataframe``."""
-        if 'is_successful' not in dataframe.columns:
-            dataframe = self._add_outcome_columns(dataframe)
-        return dataframe
+        """Add outcome flag columns if a caller skipped ``_normalize_dataframe``.
+
+        A caller-supplied ``host_outcome`` is honoured as-is; the counters are
+        only classified when that column is absent.
+        """
+        if 'is_successful' in dataframe.columns:
+            return dataframe
+        if 'host_outcome' not in dataframe.columns:
+            dataframe = self._classify_host_outcome(dataframe)
+        return self._add_outcome_flags(dataframe)
 
     def _aggregate_by_job(self, dataframe):
         """Aggregate dataframe by job_remote_id or by job_type/launch_type/ansible_version."""
