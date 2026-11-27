@@ -166,7 +166,7 @@ class SummaryMetadata(TypedDict):
 
 
 class DashboardTelemetry(TypedDict):
-    task_name: str
+    task_name: str | None
     success: bool
     collection_duration_ms: int | float
     number_of_records_processed: int

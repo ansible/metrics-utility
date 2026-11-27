@@ -33,6 +33,19 @@ class TestGetLockId:
             get_lock_id(cursor, 42)
         cursor.execute.assert_not_called()
 
+    def test_accepts_empty_string_key(self):
+        cursor = self._cursor(7)
+
+        assert get_lock_id(cursor, '') == 7
+        cursor.execute.assert_called_once_with('SELECT hashtext(%s)::bigint', ('',))
+
+    def test_raises_when_query_returns_no_row(self):
+        cursor = MagicMock()
+        cursor.fetchone.return_value = None
+
+        with pytest.raises(RuntimeError, match='no row for lock key'):
+            get_lock_id(cursor, 'key')
+
 
 class TestCollectorLocks:
     @patch('metrics_utility.automation_controller_billing.collector.connection')
@@ -54,6 +67,11 @@ class TestCollectorLocks:
         executed_sql = mock_cursor.execute.call_args_list[0][0][0]  # This returns the argument for the first call to execute
         assert 'SELECT hashtext(%s)::bigint' in executed_sql
         assert 'my_string_key' not in executed_sql
+
+    def test_rejects_non_string_key_without_touching_db(self):
+        with pytest.raises(ValueError, match='Cannot use 42 as a lock id'):
+            with lock(42, wait=False, db=None):
+                assert False, 'this should be unreachable'
 
     def test_acquire_lock(self):
         with lock('test', wait=False, db=connection) as acquired:

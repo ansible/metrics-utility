@@ -16,13 +16,16 @@ def get_lock_id(cursor, key: str) -> int:
 
     Raises:
         ValueError: If *key* is not a string.
+        RuntimeError: If the hashing query returns no row.
     """
     if not isinstance(key, str):
         raise ValueError(f'Cannot use {key} as a lock id')
 
     cursor.execute('SELECT hashtext(%s)::bigint', (key,))
-    pos = cursor.fetchone()[0]
-    return pos % (2**63)
+    row = cursor.fetchone()
+    if row is None:
+        raise RuntimeError(f'hashtext query returned no row for lock key {key!r}')
+    return row[0] % (2**63)
 
 
 @contextmanager
@@ -49,6 +52,9 @@ def lock(
     Raises:
         ValueError: If *key* is not a string.
     """
+
+    if not isinstance(key, str):
+        raise ValueError(f'Cannot use {key} as a lock id')
 
     function_name = 'pg_advisory_lock'
     if not wait:

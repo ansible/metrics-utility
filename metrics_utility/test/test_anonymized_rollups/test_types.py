@@ -77,6 +77,42 @@ def test_accepts_summary_metadata_without_install_type():
     assert 'install_type' not in validated['summary_metadata']
 
 
+def test_accepts_dashboard_telemetry_with_null_task_name():
+    payload = _payload_with_service_telemetry()
+    payload['dashboard_telemetry'][0]['task_name'] = None
+
+    validated = adapter.validate_python(payload, strict=True)
+
+    assert validated['dashboard_telemetry'][0]['task_name'] is None
+
+
+def test_accepts_empty_dashboard_telemetry():
+    payload = _payload_with_service_telemetry()
+    payload['dashboard_telemetry'] = []
+
+    validated = adapter.validate_python(payload, strict=True)
+
+    assert validated['dashboard_telemetry'] == []
+
+
+def test_accepts_null_aggregation_timestamp():
+    payload = _payload_with_service_telemetry()
+    payload['summary_metadata']['aggregation_timestamp'] = None
+
+    validated = adapter.validate_python(payload, strict=True)
+
+    assert validated['summary_metadata']['aggregation_timestamp'] is None
+
+
+def test_accepts_api_usage_telemetry_with_empty_by_endpoint():
+    payload = _payload_with_service_telemetry()
+    payload['api_usage_telemetry']['by_endpoint'] = {}
+
+    validated = adapter.validate_python(payload, strict=True)
+
+    assert validated['api_usage_telemetry']['by_endpoint'] == {}
+
+
 def test_rejects_unknown_keys():
     payload = {**_base_payload(), 'unknown_key': 'value'}
 
