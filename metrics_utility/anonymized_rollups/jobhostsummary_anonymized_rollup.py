@@ -206,10 +206,46 @@ class JobHostSummaryAnonymizedRollup(BaseAnonymizedRollup):
 
         # Keep ansible_version column name (no rename needed)
 
-        # Compute host_outcome
+        # Compute host_outcome and flag columns
+        return self._add_outcome_columns(dataframe)
+
+    def _classify_host_outcome(self, dataframe):
+        """Derive ``host_outcome`` from the raw ``failures``/``dark`` counters."""
         dataframe['host_outcome'] = 'successful'
         dataframe.loc[dataframe['failures'] > 0, 'host_outcome'] = 'failed'
         dataframe.loc[dataframe['dark'] > 0, 'host_outcome'] = 'unreachable'
+        return dataframe
+
+    def _add_outcome_flags(self, dataframe):
+        """Rebuild the int8 outcome flags from the current ``host_outcome`` column.
+
+        A missing outcome (``pd.NA``) never matches a comparison, so it is
+        treated as ``False`` for every flag instead of raising on the cast.
+        """
+        for flag, outcome in (
+            ('is_successful', 'successful'),
+            ('is_failed', 'failed'),
+            ('is_unreachable', 'unreachable'),
+        ):
+            dataframe[flag] = (dataframe['host_outcome'] == outcome).fillna(False).astype('int8')
+        return dataframe
+
+    def _add_outcome_columns(self, dataframe):
+        """Recompute ``host_outcome`` and int8 outcome flags for groupby sums."""
+        dataframe = self._classify_host_outcome(dataframe)
+        return self._add_outcome_flags(dataframe)
+
+    def _ensure_outcome_columns(self, dataframe):
+        """Derive the outcome columns for callers that skipped ``_normalize_dataframe``.
+
+        A caller-supplied ``host_outcome`` is honoured as-is; the counters are
+        only classified when that column is absent. All three flags are always
+        rebuilt so stale or partial flag columns from a previous call cannot
+        leak into the aggregation.
+        """
+        if 'host_outcome' not in dataframe.columns:
+            dataframe = self._classify_host_outcome(dataframe)
+        return self._add_outcome_flags(dataframe)
 
     def _aggregate_by_job(self, dataframe):
         """Aggregate dataframe by job_remote_id or by job_type/launch_type/ansible_version."""
@@ -219,6 +255,7 @@ class JobHostSummaryAnonymizedRollup(BaseAnonymizedRollup):
 
     def _aggregate_by_job_remote_id(self, dataframe):
         """Aggregate by job_remote_id to merge hosts for the same job."""
+        dataframe = self._ensure_outcome_columns(dataframe)
         return (
             dataframe.groupby('job_remote_id')
             .agg(
@@ -228,9 +265,9 @@ class JobHostSummaryAnonymizedRollup(BaseAnonymizedRollup):
                 skipped_total=('skipped', 'sum'),
                 ignored_total=('ignored', 'sum'),
                 rescued_total=('rescued', 'sum'),
-                successful_hosts_total=('host_outcome', lambda x: (x == 'successful').sum()),
-                failed_hosts_total=('host_outcome', lambda x: (x == 'failed').sum()),
-                unreachable_hosts_total=('host_outcome', lambda x: (x == 'unreachable').sum()),
+                successful_hosts_total=('is_successful', 'sum'),
+                failed_hosts_total=('is_failed', 'sum'),
+                unreachable_hosts_total=('is_unreachable', 'sum'),
                 job_type=('model', 'first'),
                 launch_type=('launch_type', 'first'),
                 ansible_version=('ansible_version', 'first'),
@@ -240,6 +277,7 @@ class JobHostSummaryAnonymizedRollup(BaseAnonymizedRollup):
 
     def _aggregate_by_job_type_directly(self, dataframe):
         """Aggregate directly by job_type, launch_type, ansible_version when no job_remote_id."""
+        dataframe = self._ensure_outcome_columns(dataframe)
         return (
             dataframe.groupby(['model', 'launch_type', 'ansible_version'])
             .agg(
@@ -249,9 +287,9 @@ class JobHostSummaryAnonymizedRollup(BaseAnonymizedRollup):
                 skipped_total=('skipped', 'sum'),
                 ignored_total=('ignored', 'sum'),
                 rescued_total=('rescued', 'sum'),
-                successful_hosts_total=('host_outcome', lambda x: (x == 'successful').sum()),
-                failed_hosts_total=('host_outcome', lambda x: (x == 'failed').sum()),
-                unreachable_hosts_total=('host_outcome', lambda x: (x == 'unreachable').sum()),
+                successful_hosts_total=('is_successful', 'sum'),
+                failed_hosts_total=('is_failed', 'sum'),
+                unreachable_hosts_total=('is_unreachable', 'sum'),
             )
             .reset_index()
             .rename(columns={'model': 'job_type'})
@@ -327,7 +365,7 @@ class JobHostSummaryAnonymizedRollup(BaseAnonymizedRollup):
             )
 
         # Normalize dataframe columns
-        self._normalize_dataframe(dataframe)
+        dataframe = self._normalize_dataframe(dataframe)
 
         # Collect all unique host_ids from the dataframe (top-level, not per-grouping)
         if 'host_remote_id' in dataframe.columns:
