@@ -82,6 +82,7 @@ container
 * `METRICS_UTILITY_BILLING_ACCOUNT_ID` - `billing_account_id`
 * `METRICS_UTILITY_BILLING_PROVIDER` - `billing_provider`
 * `METRICS_UTILITY_RED_HAT_ORG_ID` - `red_hat_org_id`
+* `METRICS_UTILITY_SHIP_PATH` - `ship_path`
 
 
 ### Used by S3
@@ -92,7 +93,7 @@ container
 * `METRICS_UTILITY_BUCKET_REGION` - `bucket_region`
 * `METRICS_UTILITY_BUCKET_SECRET_KEY` - `bucket_secret_key`
 
-S3 access and secret keys are optional when the runtime can resolve credentials through the default boto3 credential chain (for example, IRSA or an EC2 instance profile). If one key is set, both must be set.
+S3 access and secret keys are optional when the runtime can resolve credentials through the default boto3 credential chain (for example, IRSA or an EC2 instance profile). If one key is set, both must be set. S3 credentials and bucket transport settings are not written into gathered `config.json` payloads.
 
 
 ### Used by CRC
