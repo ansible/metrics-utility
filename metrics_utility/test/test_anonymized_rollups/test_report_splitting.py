@@ -450,8 +450,10 @@ def _print_chunk_statistics(chunk_sizes):
 def _assert_fixture_matches_production_shape(anonymized_rollup):
     """Guard against fixtures drifting from Segment/production JSON field names."""
     module = anonymized_rollup['module_stats'][0]
-    assert 'module' in module and 'module_name' not in module
-    assert 'collection' in module and 'collection_name' not in module
+    assert 'module' in module
+    assert 'module_name' not in module
+    assert 'collection' in module
+    assert 'collection_name' not in module
     assert 'runner_on_ok_total' in module
     assert 'tasks_total' in module
     assert 'tasks_ok_total' not in module
@@ -459,17 +461,20 @@ def _assert_fixture_matches_production_shape(anonymized_rollup):
     assert 'tasks_skipped_total' not in module
 
     collection = anonymized_rollup['collection_stats'][0]
-    assert 'collection' in collection and 'collection_name' not in collection
+    assert 'collection' in collection
+    assert 'collection_name' not in collection
     assert 'runner_on_ok_total' in collection
     assert 'unique_hosts_total' in collection
 
     role = anonymized_rollup['role_stats'][0]
-    assert 'collection' in role and 'collection_name' not in role
+    assert 'collection' in role
+    assert 'collection_name' not in role
     assert 'tasks_total' in role
     assert 'runner_on_ok_total' in role
 
     installed = anonymized_rollup['jobs_by_installed_collections_versions'][0]
-    assert 'collection' in installed and 'name' not in installed
+    assert 'collection' in installed
+    assert 'name' not in installed
 
     statistics = anonymized_rollup['statistics']
     assert 'rollup_period_warnings_total' in statistics

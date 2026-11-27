@@ -65,32 +65,32 @@ def test_handle_ship_target_invalid(command_instance):
         command_instance._handle_ship_target('invalid_target')
 
 
-def test_handle_extra_params_missing_ship_path(monkeypatch, command_instance):
+def test_handle_ship_target_missing_ship_path(monkeypatch, command_instance):
     monkeypatch.setenv('METRICS_UTILITY_REPORT_TYPE', 'CCSP')
     monkeypatch.delenv('METRICS_UTILITY_SHIP_PATH', raising=False)
     with pytest.raises(MissingRequiredEnvVar):
-        command_instance._handle_extra_params('directory')
+        command_instance._handle_ship_target('directory')
 
 
 def test_handle_extra_params_missing_report_type(monkeypatch, command_instance):
     monkeypatch.setenv('METRICS_UTILITY_SHIP_PATH', 'directory')
     monkeypatch.delenv('METRICS_UTILITY_REPORT_TYPE', raising=False)
     with pytest.raises(MissingRequiredEnvVar):
-        command_instance._handle_extra_params('directory')
+        command_instance._report_params()
 
 
 def test_handle_extra_params_bad_report_type(monkeypatch, command_instance):
     monkeypatch.setenv('METRICS_UTILITY_SHIP_PATH', 'directory')
     monkeypatch.setenv('METRICS_UTILITY_REPORT_TYPE', 'BADTYPE')
     with pytest.raises(BadRequiredEnvVar):
-        command_instance._handle_extra_params('directory')
+        command_instance._report_params()
 
 
 def test_handle_extra_params_all_valid(monkeypatch, command_instance):
     monkeypatch.setenv('METRICS_UTILITY_SHIP_PATH', 'directory')
     monkeypatch.setenv('METRICS_UTILITY_REPORT_TYPE', 'CCSP')
-    params = command_instance._handle_extra_params('directory')
-    assert params['ship_path'] == 'directory'
+    params = command_instance._report_params()
+    assert 'ship_path' not in params
     assert params['report_type'] == 'CCSP'
 
 

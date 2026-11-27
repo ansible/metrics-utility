@@ -28,7 +28,7 @@ class ExtractorS3(Base):
 
         Args:
             date: :class:`datetime.date` identifying the day partition in S3.
-            collections: List of required collector names (used to filter S3 keys).
+            collections: Required collector names to extract from each archive.
             optional: List of additional collector names to include if present.
 
         Yields:
@@ -55,10 +55,11 @@ class ExtractorS3(Base):
 
         Args:
             date: :class:`datetime.date` used to construct the S3 prefix.
-            collections: List of collector names to filter by (or None for all).
+            collections: Requested collector names, or None for all.
 
         Returns:
-            List of S3 key strings matching the requested collections.
+            Candidate archive keys. A filename alone cannot identify every
+            collection in a mixed archive.
         """
         prefix = self.get_path_prefix(date)
         paths = self.s3_handler.list_files(prefix)

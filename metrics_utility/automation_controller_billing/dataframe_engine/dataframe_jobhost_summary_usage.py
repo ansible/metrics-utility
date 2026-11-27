@@ -206,7 +206,7 @@ class DataframeJobhostSummaryUsage(Base):
             # Create a mapping from host_name to canonical_facts and facts
             if 'canonical_facts' in scope_dataframe.columns and 'facts' in scope_dataframe.columns:
                 # Filter to only direct managed nodes for enrichment
-                direct_mask = dataframe['managed_node_type'] == DIRECT  # DIRECT = 0
+                direct_mask = dataframe['managed_node_type'] == DIRECT
 
                 if direct_mask.any():
                     host_facts_mapping = scope_dataframe.set_index('host_name')[['canonical_facts', 'facts']].to_dict('index')

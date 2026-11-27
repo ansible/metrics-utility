@@ -31,19 +31,19 @@ class TestDictOutput:
     def test_dict_raises_for_list(self):
         """Test that dict method raises exception for list input."""
         output = DictOutput()
-        with pytest.raises(Exception, match='data must be a dict, or None'):
+        with pytest.raises(TypeError, match='data must be a dict, or None'):
             output.dict(['item1', 'item2'])
 
     def test_dict_raises_for_string(self):
         """Test that dict method raises exception for string input."""
         output = DictOutput()
-        with pytest.raises(Exception, match='data must be a dict, or None'):
+        with pytest.raises(TypeError, match='data must be a dict, or None'):
             output.dict('string')
 
     def test_dict_raises_for_tuple(self):
         """Test that dict method raises exception for tuple input."""
         output = DictOutput()
-        with pytest.raises(Exception, match='data must be a dict, or None'):
+        with pytest.raises(TypeError, match='data must be a dict, or None'):
             output.dict(('tuple', 'data'))
 
 
@@ -167,13 +167,13 @@ class TestCollectionOutput:
     def test_files_raises_for_dict(self):
         """Test that files method raises exception for dict input."""
         output = CollectionOutput('/tmp/test')
-        with pytest.raises(Exception, match='filenames must be a list, or None'):
+        with pytest.raises(TypeError, match='filenames must be a list, or None'):
             output.files({'key': 'value'})
 
     def test_files_raises_for_string(self):
         """Test that files method raises exception for string input."""
         output = CollectionOutput('/tmp/test')
-        with pytest.raises(Exception, match='filenames must be a list, or None'):
+        with pytest.raises(TypeError, match='filenames must be a list, or None'):
             output.files('string')
 
     def test_sql_creates_csv_files(self, tmp_path):

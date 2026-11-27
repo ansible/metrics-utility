@@ -6,17 +6,13 @@ import os
 import tarfile
 import tempfile
 
+from unittest.mock import Mock
+
 import pytest
 
-from metrics_utility.automation_controller_billing.extract.base import (
-    _COLLECTION_TARBALL_RE,
-    _COLLECTOR_TARBALL_NAMES,
-    _LEGACY_TARBALL_RE,
-    Base,
-    _safe_extract,
-)
+from metrics_utility.automation_controller_billing.extract.base import Base, _safe_extract
+from metrics_utility.automation_controller_billing.extract.extractor_s3 import ExtractorS3
 from metrics_utility.exceptions import MetricsException
-from metrics_utility.management.validation import VALID_COLLECTORS
 
 
 # ---------------------------------------------------------------------------
@@ -131,12 +127,6 @@ class TestFilterTarballPaths:
     def _ext(self):
         return _make_extractor()
 
-    # Baseline: None collections returns all paths unchanged
-    def test_none_collections_returns_all_paths(self):
-        ext = self._ext()
-        paths = ['/d/2024/01/01/uuid-1.tar.gz', '/d/2024/01/01/uuid-2.tar.gz']
-        assert ext.filter_tarball_paths(paths, None) == paths
-
     # Forbidden collection names raise
     def test_data_collection_status_raises(self):
         ext = self._ext()
@@ -148,143 +138,53 @@ class TestFilterTarballPaths:
         with pytest.raises(MetricsException):
             ext.filter_tarball_paths(['/d/file.tar.gz'], ['config'])
 
-    # Legacy filename (numeric suffix only) is always included
-    def test_legacy_numeric_suffix_always_included(self):
-        ext = self._ext()
-        paths = ['/data/uuid-123.tar.gz']
-        result = ext.filter_tarball_paths(paths, ['main_host'])
-        assert '/data/uuid-123.tar.gz' in result
-
-    # Modern filename matching collection name is included
-    def test_filename_matching_collection_is_included(self):
-        ext = self._ext()
-        paths = ['/data/uuid-456-main_host.tar.gz']
-        result = ext.filter_tarball_paths(paths, ['main_host'])
-        assert '/data/uuid-456-main_host.tar.gz' in result
-
     def test_empty_paths_returns_empty_list(self):
         ext = self._ext()
         assert ext.filter_tarball_paths([], ['main_host']) == []
+
+    @pytest.mark.parametrize('collections', [None, [], ['main_host']])
+    def test_skips_markers_and_checksums_without_guessing_archive_contents(self, collections):
+        retained = [
+            '/data/uuid-0.tar.gz',
+            '/data/uuid-1-job_host_summary.tar.gz',
+            '/data/uuid-2-main_host.tar.gz',
+            '/data/controller-2026-backup.tar.gz',
+            '/data/source_tarball',
+            '/data/legacy.tgz',
+            '/data/uuid-1-unknown.tar.gz',
+            '/data/uuid-1-config.tar.gz',
+        ]
+        paths = ['/data/', *retained, '/data/_SUCCESS', '/data/archive.tar.gz.sha256']
+        assert self._ext().filter_tarball_paths(paths, collections) == retained
+
+    @pytest.mark.parametrize('archive', ['data/uuid-0-job_host_summary.tar.gz', 'data/renamed-backup'])
+    def test_s3_reads_requested_rows_from_mixed_archive(self, monkeypatch, archive):
+        storage = Mock()
+        storage.list_files.return_value = ['data/', archive, 'data/_SUCCESS']
+        storage.download_file.side_effect = lambda _key, dest: _make_tarball(
+            dest,
+            [
+                ('main_host.csv', 'host_name\nexample\n'),
+                ('job_host_summary.csv', 'count\n9\n'),
+                ('config.json', '{"install_uuid":"abc"}'),
+                ('data_collection_status.csv', 'status\ncomplete\n'),
+            ],
+        )
+        monkeypatch.setattr('metrics_utility.automation_controller_billing.extract.extractor_s3.S3Handler', lambda params: storage)
+        extractor = ExtractorS3({'ship_path': '/data'})
+
+        (batch,) = extractor.iter_batches(datetime.date(2026, 1, 1), ['main_host'], ['config', 'data_collection_status'])
+
+        assert [call.args[0] for call in storage.download_file.call_args_list] == [archive]
+        assert batch['main_host']['host_name'].tolist() == ['example']
+        assert batch['config']['install_uuid'] == 'abc'
+        assert batch['data_collection_status']['status'].tolist() == ['complete']
 
     def test_returns_list_type(self):
         ext = self._ext()
         paths = ['/data/uuid-1-main_host.tar.gz']
         result = ext.filter_tarball_paths(paths, ['main_host'])
         assert isinstance(result, list)
-
-    # A modern tarball for a different collection must NOT be included
-    def test_modern_tarball_for_other_collection_is_excluded(self):
-        ext = self._ext()
-        paths = [
-            '/data/2024/01/01/uuid-0-main_jobevent.tar.gz',
-            '/data/2024/01/01/uuid-1-main_host.tar.gz',
-        ]
-        result = ext.filter_tarball_paths(paths, ['main_host'])
-        assert result == ['/data/2024/01/01/uuid-1-main_host.tar.gz']
-
-    def test_multiple_collections_filter(self):
-        ext = self._ext()
-        paths = [
-            '/data/uuid-0-job_host_summary.tar.gz',
-            '/data/uuid-1-main_indirectmanagednodeaudit.tar.gz',
-            '/data/uuid-2-main_host.tar.gz',
-            '/data/uuid-3-main_jobevent.tar.gz',
-        ]
-        result = ext.filter_tarball_paths(paths, ['job_host_summary', 'main_indirectmanagednodeaudit'])
-        assert result == [
-            '/data/uuid-0-job_host_summary.tar.gz',
-            '/data/uuid-1-main_indirectmanagednodeaudit.tar.gz',
-        ]
-
-    # Unknown / config suffixes are kept even when not requested
-    def test_unknown_suffix_is_included_regardless_of_collections(self):
-        ext = self._ext()
-        paths = ['/data/uuid-1-unknown.tar.gz']
-        assert ext.filter_tarball_paths(paths, ['main_host']) == paths
-
-    def test_config_suffix_is_included_regardless_of_collections(self):
-        ext = self._ext()
-        paths = ['/data/uuid-1-config.tar.gz']
-        assert ext.filter_tarball_paths(paths, ['main_host']) == paths
-
-    # Unexpected / non-standard filenames are kept so no data is lost
-    def test_unexpected_filenames_are_included(self):
-        ext = self._ext()
-        paths = [
-            '/data/source_tarball',
-            '/data/custom_archive.tar.gz',
-            '/data/nested/dir/whatever.tgz',
-        ]
-        assert ext.filter_tarball_paths(paths, ['main_host']) == paths
-
-    # Legacy (0.6.0 and lower) numeric-suffix tarballs are kept
-    def test_legacy_numeric_suffix_included_alongside_modern_filter(self):
-        ext = self._ext()
-        paths = [
-            '/data/uuid-0.tar.gz',
-            '/data/uuid-1-main_jobevent.tar.gz',
-        ]
-        assert ext.filter_tarball_paths(paths, ['main_host']) == ['/data/uuid-0.tar.gz']
-
-    def test_dots_in_extension_are_literal(self):
-        ext = self._ext()
-        weird = '/data/uuid-0XtarXgz'
-        # Wildcard dots would make this look like a legacy numeric tarball.
-        assert _LEGACY_TARBALL_RE.search(weird) is None
-        assert _COLLECTION_TARBALL_RE.search(weird) is None
-        # Not recognised → treated as an unexpected name and always kept.
-        assert ext.filter_tarball_paths([weird], ['main_host']) == [weird]
-
-    def test_wildcard_dots_would_have_matched_a_collection(self):
-        ext = self._ext()
-        # With unescaped dots this parses as "-0-main_host" + ".tar.gz" and
-        # would be filtered out for a non-matching collection.
-        weird = '/data/uuid-0-main_hostXtarXgz'
-        assert _COLLECTION_TARBALL_RE.search(weird) is None
-        assert ext.filter_tarball_paths([weird], ['main_jobevent']) == [weird]
-
-    # A suffix that is not a known collector name must never be dropped, even
-    # though it looks like a modern collection tarball (renamed backup archive).
-    def test_unknown_collection_suffix_name_is_included(self):
-        ext = self._ext()
-        paths = ['/data/2026/01/01/controller-2026-backup.tar.gz']
-        assert ext.filter_tarball_paths(paths, ['main_host']) == paths
-
-    def test_unknown_collection_suffix_is_not_mistaken_for_a_collection(self):
-        ext = self._ext()
-        # "backup" contains none of the requested needle names, yet must be kept.
-        paths = [
-            '/data/controller-2026-backup.tar.gz',
-            '/data/uuid-0-main_jobevent.tar.gz',
-        ]
-        assert ext.filter_tarball_paths(paths, ['main_host']) == ['/data/controller-2026-backup.tar.gz']
-
-    # Known collector names are still filtered by the requested collections.
-    def test_known_unrequested_collector_excluded_and_requested_included(self):
-        ext = self._ext()
-        paths = [
-            '/data/uuid-0-main_jobevent.tar.gz',
-            '/data/uuid-1-main_host.tar.gz',
-        ]
-        result = ext.filter_tarball_paths(paths, ['main_host'])
-        assert result == ['/data/uuid-1-main_host.tar.gz']
-
-    def test_known_requested_collector_included(self):
-        ext = self._ext()
-        paths = ['/data/uuid-0-main_jobevent.tar.gz']
-        assert ext.filter_tarball_paths(paths, ['main_jobevent']) == paths
-
-
-class TestCollectorTarballNames:
-    """The local collector-name set must not drift from VALID_COLLECTORS."""
-
-    def test_matches_validation_collectors(self):
-        # job_host_summary is always gathered, so validation.py does not list it
-        # as an *optional* collector; every other known name must match exactly.
-        assert _COLLECTOR_TARBALL_NAMES - {'job_host_summary'} == set(VALID_COLLECTORS)
-
-    def test_contains_all_valid_collectors(self):
-        assert set(VALID_COLLECTORS) <= _COLLECTOR_TARBALL_NAMES
 
 
 class TestFilterAndExtractRenamedBackup:

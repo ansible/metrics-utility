@@ -147,10 +147,12 @@ class TestUnifiedJobsDashboard:
 
     @pytest.mark.parametrize('batch_size', [0, -1, '5', True, 1.5])
     def test_rejects_invalid_batch_size(self, batch_size):
+        collector = unified_jobs_dashboard(db=self.mock_db, since=self.since, until=self.until, batch_size=batch_size)
         with pytest.raises(ValueError, match='batch_size'):
-            unified_jobs_dashboard(db=self.mock_db, since=self.since, until=self.until, batch_size=batch_size).gather()
+            collector.gather()
 
     @pytest.mark.parametrize('after_id', ['1; DROP TABLE x', True, 1.5])
     def test_rejects_invalid_after_id(self, after_id):
+        collector = unified_jobs_dashboard(db=self.mock_db, since=self.since, until=self.until, after_id=after_id)
         with pytest.raises(ValueError, match='after_id'):
-            unified_jobs_dashboard(db=self.mock_db, since=self.since, until=self.until, after_id=after_id).gather()
+            collector.gather()
