@@ -156,6 +156,35 @@ class IndirectNodesByModule(TypedDict):
     host_count: int
 
 
+class SummaryMetadata(TypedDict):
+    summary_date: str
+    hourly_collections_count: int
+    missing_hours: list[int | str]
+    aggregation_timestamp: str | None
+    # Omitted by pre-backport container payloads
+    install_type: NotRequired[str]
+
+
+class DashboardTelemetry(TypedDict):
+    task_name: str | None
+    success: bool
+    collection_duration_ms: int | float
+    number_of_records_processed: int
+    database_query_time_ms: int | float | None
+    cache_hit_rate: int | float | None
+
+
+class LeaderboardTelemetry(TypedDict):
+    enabled: bool | None
+    observed_at: str
+
+
+class ApiUsageTelemetry(TypedDict):
+    available: bool
+    total_requests: int
+    by_endpoint: dict[str, dict[str, int]]
+
+
 class AnonymizedPayload(TypedDict):
     statistics: Statistics
     rollup_period_ansible_versions: list[str]
@@ -172,6 +201,11 @@ class AnonymizedPayload(TypedDict):
     observability_by_tasks: list[ObservabilityByTask]
     indirect_nodes_by_collection: list[IndirectNodesByCollection]
     indirect_nodes_by_module: list[IndirectNodesByModule]
+    # Added by metrics-service after anonymization
+    summary_metadata: NotRequired[SummaryMetadata]
+    dashboard_telemetry: NotRequired[list[DashboardTelemetry]]
+    leaderboard_telemetry: NotRequired[LeaderboardTelemetry]
+    api_usage_telemetry: NotRequired[ApiUsageTelemetry]
     # Present only when collected_events_total > 0
     module_stats: NotRequired[list[ModuleStats]]
     collection_stats: NotRequired[list[CollectionStats]]

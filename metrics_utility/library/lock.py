@@ -3,6 +3,31 @@
 from contextlib import contextmanager
 
 
+def get_lock_id(cursor, key: str) -> int:
+    """Derive a stable non-negative 64-bit advisory-lock id from *key*.
+
+    Args:
+        cursor: Database cursor used to run the hashing query.
+        key: A unique string identifying the lock.
+
+    Returns:
+        ``hashtext(key)`` normalized into the non-negative 64-bit integer
+        range ``[0, 2**63)``.
+
+    Raises:
+        ValueError: If *key* is not a string.
+        RuntimeError: If the hashing query returns no row.
+    """
+    if not isinstance(key, str):
+        raise ValueError(f'Cannot use {key} as a lock id')
+
+    cursor.execute('SELECT hashtext(%s)::bigint', (key,))
+    row = cursor.fetchone()
+    if row is None:
+        raise RuntimeError(f'hashtext query returned no row for lock key {key!r}')
+    return row[0] % (2**63)
+
+
 @contextmanager
 def lock(
     key,
@@ -37,10 +62,9 @@ def lock(
     release_function_name = 'pg_advisory_unlock'
 
     with db.cursor() as cursor:
-        cursor.execute('SELECT hashtext(%s)::bigint', (key,))
-        pos = cursor.fetchone()[0]
+        pos = get_lock_id(cursor, key)
         base = 'SELECT %s(%d)'
-        params = (pos % (2**63),)
+        params = (pos,)
         acquire_params = (function_name, *params)
         command = base % acquire_params
 
