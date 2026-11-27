@@ -377,7 +377,7 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
         else:
             try:
                 parsed = json.loads(x) if isinstance(x, str) else x
-            except (json.JSONDecodeError, TypeError, ValueError):
+            except (TypeError, ValueError):
                 return False
         if isinstance(parsed, list):
             return len(parsed) > 0

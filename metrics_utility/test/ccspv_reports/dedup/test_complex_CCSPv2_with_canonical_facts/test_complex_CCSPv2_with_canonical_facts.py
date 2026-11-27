@@ -2428,11 +2428,8 @@ def validate_input_csv_data_integrity():
         assert file_path.exists(), f'Required input file {file_name} not found'
 
         # Basic CSV validation
-        try:
-            df = pandas.read_csv(file_path, encoding='utf-8')
-            assert len(df) > 0, f'File {file_name} is empty'
-        except (OSError, UnicodeDecodeError, pandas.errors.ParserError) as e:
-            pytest.fail(f'Failed to read {file_name}: {e}')
+        df = pandas.read_csv(file_path, encoding='utf-8')
+        assert len(df) > 0, f'File {file_name} is empty'
 
 
 def validate_json_fields_comprehensive():
@@ -2445,17 +2442,13 @@ def validate_json_fields_comprehensive():
     if main_host_path.exists():
         df = pandas.read_csv(main_host_path, encoding='utf-8')
         for _, row in df.iterrows():
-            try:
-                canonical_facts = json.loads(row['canonical_facts'])
-                assert isinstance(canonical_facts, dict), 'canonical_facts must be a dict'
+            canonical_facts = json.loads(row['canonical_facts'])
+            assert isinstance(canonical_facts, dict), 'canonical_facts must be a dict'
 
-                # Validate expected fields
-                expected_fields = ['ansible_host', 'host_name']
-                for field in expected_fields:
-                    assert field in canonical_facts, f'Missing {field} in canonical_facts'
-
-            except json.JSONDecodeError:
-                pytest.fail(f'Invalid JSON in canonical_facts for row {row["host_name"]}')
+            # Validate expected fields
+            expected_fields = ['ansible_host', 'host_name']
+            for field in expected_fields:
+                assert field in canonical_facts, f'Missing {field} in canonical_facts'
 
 
 def validate_canonical_facts_combinations():
@@ -2469,26 +2462,22 @@ def validate_canonical_facts_combinations():
 
         # Validate canonical facts combinations by platform
         for _, row in df.iterrows():
-            try:
-                canonical_facts = json.loads(row['canonical_facts'])
-                facts = json.loads(row['facts'])
+            canonical_facts = json.loads(row['canonical_facts'])
+            facts = json.loads(row['facts'])
 
-                virtualization_type = facts.get('ansible_virtualization_type')
-                connection_type = facts.get('ansible_connection_variable')
+            virtualization_type = facts.get('ansible_virtualization_type')
+            connection_type = facts.get('ansible_connection_variable')
 
-                # Platform-specific validations
-                if virtualization_type == 'VirtualPC':  # Windows
-                    assert connection_type == 'winrm', f'Windows host {row["host_name"]} should use winrm'
-                    assert canonical_facts.get('ansible_port') == 5985, f'Windows host {row["host_name"]} should use port 5985'
+            # Platform-specific validations
+            if virtualization_type == 'VirtualPC':  # Windows
+                assert connection_type == 'winrm', f'Windows host {row["host_name"]} should use winrm'
+                assert canonical_facts.get('ansible_port') == 5985, f'Windows host {row["host_name"]} should use port 5985'
 
-                elif virtualization_type == 'container':  # Kubernetes
-                    assert connection_type == 'kubectl', f'Container host {row["host_name"]} should use kubectl'
+            elif virtualization_type == 'container':  # Kubernetes
+                assert connection_type == 'kubectl', f'Container host {row["host_name"]} should use kubectl'
 
-                elif connection_type == 'tcp':  # Network devices
-                    assert virtualization_type == 'lxc', f'TCP connection host {row["host_name"]} should be lxc'
-
-            except json.JSONDecodeError:
-                pytest.fail(f'Invalid JSON in row {row["host_name"]}')
+            elif connection_type == 'tcp':  # Network devices
+                assert virtualization_type == 'lxc', f'TCP connection host {row["host_name"]} should be lxc'
 
 
 def extract_csvs_from_tarballs():
