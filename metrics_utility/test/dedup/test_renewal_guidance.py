@@ -330,6 +330,27 @@ class TestDedupRenewal:
         assert len(result) == 1
         assert result[0]['compound_serial'] is None
 
+    def test_individual_serial_groups_ignore_blank_and_repeated_serials(self, mock_dataframes, base_extra_params):
+        mock_dataframes['host_metric'].build_dataframe.return_value = pd.DataFrame()
+        dedup = DedupRenewalExperimental(mock_dataframes, base_extra_params)
+        expanded = pd.DataFrame(
+            [
+                ('first', 'shared/shared', ['shared', 'shared']),
+                ('second', 'mid:shared', ['shared']),
+                ('unrelated', 'ps:unique', ['', 'unique']),
+                ('also-blank', None, ['']),
+                ('no-serials', None, []),
+            ],
+            columns=['hostname_group', 'compound_serial', 'individual_serials'],
+        )
+
+        groups, processed = dedup._create_serial_groups(expanded)
+
+        assert processed == {'first', 'second'}
+        assert set(groups) == {'individual:shared'}
+        assert groups['individual:shared']['canonical_group'] == 'first'
+        assert list(groups['individual:shared']['groups_to_merge']) == ['first', 'second']
+
     def test_merge_serial_fields(self, mock_dataframes, base_extra_params):
         """Test _merge_serial_fields method."""
         mock_dataframes['host_metric'].build_dataframe.return_value = pd.DataFrame()

@@ -178,8 +178,8 @@ class TestDedupCCSP:
         # Create test dataframe
         df = pd.DataFrame(
             {
-                'host_name': ['host1', 'host2', 'host3'],
-                'serials': [['serial1', None], [None], ['serial1']],
+                'host_name': ['host1', 'missing-serial-list', 'host2', 'host3'],
+                'serials': [['serial1', None], None, [None], ['serial1']],
             }
         )
 

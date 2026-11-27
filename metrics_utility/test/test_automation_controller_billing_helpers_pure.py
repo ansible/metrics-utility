@@ -134,6 +134,10 @@ class TestMergeJsonSets:
         result = merge_json_sets(values)
         assert result == {'key': {'val'}}
 
+    def test_valid_json_non_objects_do_not_interrupt_merge(self):
+        values = ['{"cpu": "x86"}', '["not a fact map"]', 'null', '{"cpu": "arm"}']
+        assert merge_json_sets(values) == {'cpu': {'x86', 'arm'}}
+
     def test_nested_dict_values_are_hashable(self):
         """Nested dict facts (e.g. tags) must not raise TypeError (AAP-101848)."""
         values = [

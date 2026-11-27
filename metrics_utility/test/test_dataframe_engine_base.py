@@ -288,10 +288,6 @@ class ConcreteBase(Base):
     def cast_types():
         return {'count': 'int64'}
 
-    @staticmethod
-    def operations():
-        return {}
-
 
 class TestBaseDates:
     def _make_base(self, extra_params):
@@ -346,6 +342,15 @@ class TestBaseSummarizeMergedDataframes:
     def _make_merged_df(self, x_vals, y_vals):
         """Build a simple merged DataFrame with _x/_y suffix columns."""
         return pd.DataFrame({'count_x': x_vals, 'count_y': y_vals})
+
+    def test_merge_sums_counts_without_subclass_operations(self):
+        first = pd.DataFrame({'host_name': ['shared', 'first'], 'count': [2, 5]}).set_index('host_name')
+        second = pd.DataFrame({'host_name': ['shared', 'second'], 'count': [3, 7]}).set_index('host_name')
+
+        merged = self._make_base().merge(first, second)
+
+        expected = pd.DataFrame({'count': [5, 7, 5]}, index=pd.Index(['first', 'second', 'shared'], name='host_name', dtype=object))
+        pd.testing.assert_frame_equal(merged.sort_index(), expected)
 
     def test_default_operation_sums_columns(self):
         base = self._make_base()
