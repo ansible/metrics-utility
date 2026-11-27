@@ -217,10 +217,17 @@ class JobHostSummaryAnonymizedRollup(BaseAnonymizedRollup):
         return dataframe
 
     def _add_outcome_flags(self, dataframe):
-        """Derive the int8 outcome flags from the ``host_outcome`` column."""
-        dataframe['is_successful'] = (dataframe['host_outcome'] == 'successful').astype('int8')
-        dataframe['is_failed'] = (dataframe['host_outcome'] == 'failed').astype('int8')
-        dataframe['is_unreachable'] = (dataframe['host_outcome'] == 'unreachable').astype('int8')
+        """Rebuild the int8 outcome flags from the current ``host_outcome`` column.
+
+        A missing outcome (``pd.NA``) never matches a comparison, so it is
+        treated as ``False`` for every flag instead of raising on the cast.
+        """
+        for flag, outcome in (
+            ('is_successful', 'successful'),
+            ('is_failed', 'failed'),
+            ('is_unreachable', 'unreachable'),
+        ):
+            dataframe[flag] = (dataframe['host_outcome'] == outcome).fillna(False).astype('int8')
         return dataframe
 
     def _add_outcome_columns(self, dataframe):
@@ -229,13 +236,13 @@ class JobHostSummaryAnonymizedRollup(BaseAnonymizedRollup):
         return self._add_outcome_flags(dataframe)
 
     def _ensure_outcome_columns(self, dataframe):
-        """Add outcome flag columns if a caller skipped ``_normalize_dataframe``.
+        """Derive the outcome columns for callers that skipped ``_normalize_dataframe``.
 
         A caller-supplied ``host_outcome`` is honoured as-is; the counters are
-        only classified when that column is absent.
+        only classified when that column is absent. All three flags are always
+        rebuilt so stale or partial flag columns from a previous call cannot
+        leak into the aggregation.
         """
-        if 'is_successful' in dataframe.columns:
-            return dataframe
         if 'host_outcome' not in dataframe.columns:
             dataframe = self._classify_host_outcome(dataframe)
         return self._add_outcome_flags(dataframe)

@@ -503,6 +503,52 @@ def test_aggregate_by_job_remote_id_keeps_supplied_host_outcome(supplied, expect
     assert result['unreachable_hosts_total'].tolist() == [expected[2]]
 
 
+@pytest.mark.parametrize('helper', ['_aggregate_by_job_remote_id', '_aggregate_by_job_type_directly'])
+def test_direct_aggregation_rebuilds_reused_frame_outcome_flags(helper):
+    """A second call on the same frame must not reuse the first call's flags."""
+    rollup = JobHostSummaryAnonymizedRollup()
+    dataframe = pd.DataFrame(_outcome_rows(['successful', 'successful']))
+    dataframe['host_outcome'] = ['failed', 'unreachable']
+
+    first = getattr(rollup, helper)(dataframe)
+    assert first['successful_hosts_total'].tolist() == [0]
+    assert first['failed_hosts_total'].tolist() == [1]
+    assert first['unreachable_hosts_total'].tolist() == [1]
+
+    dataframe['host_outcome'] = ['successful', 'successful']
+    second = getattr(rollup, helper)(dataframe)
+    assert second['successful_hosts_total'].tolist() == [2]
+    assert second['failed_hosts_total'].tolist() == [0]
+    assert second['unreachable_hosts_total'].tolist() == [0]
+
+
+def test_direct_aggregation_ignores_missing_host_outcome():
+    """A ``pd.NA`` outcome must not raise and must contribute no flag."""
+    rollup = JobHostSummaryAnonymizedRollup()
+    dataframe = pd.DataFrame(_outcome_rows(['successful', 'successful']))
+    dataframe['host_outcome'] = pd.Series(['failed', pd.NA], dtype='string')
+
+    result = rollup._aggregate_by_job_remote_id(dataframe)
+
+    assert result['successful_hosts_total'].tolist() == [0]
+    assert result['failed_hosts_total'].tolist() == [1]
+    assert result['unreachable_hosts_total'].tolist() == [0]
+
+
+def test_direct_aggregation_repairs_partial_outcome_flags():
+    """Caller-supplied ``host_outcome`` with only ``is_successful`` present still aggregates."""
+    rollup = JobHostSummaryAnonymizedRollup()
+    dataframe = pd.DataFrame(_outcome_rows(['failed']))
+    dataframe['host_outcome'] = 'failed'
+    dataframe['is_successful'] = np.int8(1)
+
+    result = rollup._aggregate_by_job_type_directly(dataframe)
+
+    assert result['successful_hosts_total'].tolist() == [0]
+    assert result['failed_hosts_total'].tolist() == [1]
+    assert result['unreachable_hosts_total'].tolist() == [0]
+
+
 def test_normalize_dataframe_overrides_stale_host_outcome():
     """Normalization always recomputes ``host_outcome`` from the counters."""
     rollup = JobHostSummaryAnonymizedRollup()
