@@ -2,7 +2,7 @@
 Unit tests targeting uncovered branches in anonymized_rollups.py:
   - anonymize_data: early-return guard (not a dict / falsy)
   - _calculate_host_summary_totals: empty host_ids branch
-  - _inject_controller_version: empty list early return
+  - _inject_controller_version_to_all_items: empty list and version injection
 """
 
 import pandas as pd
@@ -10,7 +10,7 @@ import pytest
 
 from metrics_utility.anonymized_rollups.anonymized_rollups import (
     _calculate_host_summary_totals,
-    _inject_controller_version,
+    _inject_controller_version_to_all_items,
     _installed_collection_name_is_unknown,
     anonymize_data,
 )
@@ -163,24 +163,24 @@ def test_calculate_host_summary_totals_with_host_ids():
 
 
 # ---------------------------------------------------------------------------
-# _inject_controller_version – empty list early return
+# _inject_controller_version_to_all_items
 # ---------------------------------------------------------------------------
 
 
-def test_inject_controller_version_empty_list_returns_empty():
-    result = _inject_controller_version([], ['1.0.0'])
+def test_inject_controller_version_to_all_items_empty_list_returns_empty():
+    result = _inject_controller_version_to_all_items([], ['1.0.0'])
     assert result == []
 
 
-def test_inject_controller_version_injects_first_version():
-    jobs = [{'job_type': 'run'}]
-    result = _inject_controller_version(jobs, ['2.5.0', '2.4.0'])
-    assert result[0]['controller_version'] == '2.5.0'
+def test_inject_controller_version_to_all_items_injects_first_version():
+    jobs = [{'job_type': 'run'}, {'job_type': 'check'}]
+    result = _inject_controller_version_to_all_items(jobs, ['2.5.0', '2.4.0'])
+    assert [item['controller_version'] for item in result] == ['2.5.0', '2.5.0']
 
 
-def test_inject_controller_version_no_versions_injects_none():
+def test_inject_controller_version_to_all_items_no_versions_injects_none():
     jobs = [{'job_type': 'run'}]
-    result = _inject_controller_version(jobs, [])
+    result = _inject_controller_version_to_all_items(jobs, [])
     assert result[0]['controller_version'] is None
 
 

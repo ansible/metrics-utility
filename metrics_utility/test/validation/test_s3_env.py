@@ -377,19 +377,6 @@ def test_s3handler_client_is_cached(mock_session_cls):
 
 
 @patch('metrics_utility.automation_controller_billing.base.s3_handler.boto3.Session')
-def test_s3handler_resource_is_cached(mock_session_cls):
-    """get_s3_resource() should construct the resource once and reuse it."""
-    handler, session = _mocked_handler(mock_session_cls)
-
-    first = handler.get_s3_resource()
-    second = handler.get_s3_resource()
-    third = handler.get_s3_resource()
-
-    assert first is second is third
-    session.resource.assert_called_once_with('s3', endpoint_url='https://s3.example.com')
-
-
-@patch('metrics_utility.automation_controller_billing.base.s3_handler.boto3.Session')
 def test_s3handler_operations_share_cached_client(mock_session_cls, tmp_path):
     """list_files/download_file/upload_file should share one client and never build a resource."""
     handler, session = _mocked_handler(mock_session_cls)

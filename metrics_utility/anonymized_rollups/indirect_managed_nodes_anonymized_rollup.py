@@ -54,34 +54,6 @@ def _extract_collection_and_module_names(events_value):
     return collections, modules
 
 
-def _extract_collection_names(events_value):
-    """Parse the events JSON column and return a set of collection names.
-
-    Args:
-        events_value: Raw events column value - could be a JSON string,
-            a Python list, None, or NaN.
-
-    Returns:
-        Set of two-part collection name strings (e.g. ``{"azure.azcollection"}``).
-    """
-    return _extract_collection_and_module_names(events_value)[0]
-
-
-def _extract_module_names(events_value):
-    """Parse the events JSON column and return a set of full FQCNs (module names).
-
-    Only FQCNs with a valid namespace.collection prefix are included.
-
-    Args:
-        events_value: Raw events column value - could be a JSON string,
-            a Python list, None, or NaN.
-
-    Returns:
-        Set of full FQCN strings (e.g. ``{"azure.azcollection.azure_rm_vm"}``).
-    """
-    return _extract_collection_and_module_names(events_value)[1]
-
-
 def _make_group_key(organization_name, collection_name):
     return f'{organization_name}{GROUP_KEY_SEPARATOR}{collection_name}'
 

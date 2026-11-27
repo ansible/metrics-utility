@@ -33,7 +33,6 @@ class S3Handler:
 
         self._session = None
         self._s3_client = None
-        self._s3_resource = None
 
     @property
     def session(self):
@@ -57,16 +56,6 @@ class S3Handler:
 
         self._session = session
         return self._session
-
-    def get_s3_resource(self):
-        """Return a boto3 S3 resource connected to the configured endpoint.
-
-        Returns:
-            A :class:`boto3.resources.factory.s3.ServiceResource` instance.
-        """
-        if self._s3_resource is None:
-            self._s3_resource = self.session.resource('s3', endpoint_url=self.bucket_endpoint)
-        return self._s3_resource
 
     def get_s3_client(self):
         """Return a boto3 S3 low-level client connected to the configured endpoint.

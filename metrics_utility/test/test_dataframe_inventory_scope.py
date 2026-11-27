@@ -6,7 +6,6 @@ import pytest
 
 from metrics_utility.automation_controller_billing.dataframe_engine.dataframe_inventory_scope import (
     DataframeInventoryScope,
-    compute_serial,
     serial_from_facts,
 )
 from metrics_utility.automation_controller_billing.helpers import merge_json_sets
@@ -48,7 +47,6 @@ def test_serial_from_facts_preserves_duplicate_index_and_dtype():
 
     expected = pd.Series(['first/one', None, 'second/two'], index=[4, 2, 4], dtype=result.dtype)
     pd.testing.assert_series_equal(result, expected, check_names=False)
-    pd.testing.assert_series_equal(result, dataframe.apply(compute_serial, axis=1), check_names=False)
 
 
 @pytest.mark.parametrize('facts', ['null', '[]', '123'])

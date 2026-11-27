@@ -297,7 +297,7 @@ class TestDedupCCSP:
     def test_df_to_mapping_empty_string_serials(self, mock_dataframes, base_extra_params):
         """Empty-string serials must not be used as canonical keys.
 
-        compute_serial() returns None for missing data, but defensively ensure that
+        serial_from_facts() returns None for missing data, but defensively ensure that
         an empty string — which would be falsy and semantically meaningless — is also
         filtered out rather than grouping unrelated hosts.
         """
