@@ -55,6 +55,7 @@ metrics_utility/test/test_data/data/**/*.json
 
 # AI
 /.claude/*
+!/.claude/settings.json
 
 # Temporary collection files
 /tools/collections/collections.json

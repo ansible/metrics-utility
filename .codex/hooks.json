@@ -1,0 +1,30 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "uv run python -m tools.privacy_guard hook --harness codex --event pre-tool",
+            "timeout": 60,
+            "statusMessage": "Checking privacy contracts"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "apply_patch|Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "uv run python -m tools.privacy_guard hook --harness codex --event post-tool",
+            "timeout": 60,
+            "statusMessage": "Checking privacy contracts"
+          }
+        ]
+      }
+    ]
+  }
+}

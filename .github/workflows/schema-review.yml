@@ -5,6 +5,12 @@ on:
     types: [opened, ready_for_review, synchronize, edited]
     paths:
       - 'metrics_utility/schemas/**'
+      - 'metrics_utility/anonymized_rollups/**'
+      - 'metrics_utility/library/storage/segment.py'
+      - 'metrics_utility/library/collectors/controller/**'
+      - 'metrics_utility/automation_controller_billing/collector.py'
+      - 'metrics_utility/management/validation.py'
+      - 'privacy-contracts.yaml'
 
 jobs:
   request-review:
@@ -32,10 +38,11 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: context.payload.pull_request.number,
-              body: "⚠️ This PR modifies files in `metrics-utility/schemas/`. One person from Emerging Services (@hunterkepley / @himdel / @MilanPospisil / @cshiels-ie), and one person from Analytics HCC (@dmzoneill / @AparnaKarve) must approve. DO NOT merge until both teams have approved the changes. [Contract here](https://handbook.eng.ansible.com/Teams/Emerging-Services-Team/Metrics-Utility/Contracts/billing-analytics-contract)"
+              body: "⚠️ This PR modifies schemas or privacy-sensitive telemetry/billing contracts (`metrics_utility/schemas/`, anonymized rollups, Segment storage, Controller credentials/collectors, or `privacy-contracts.yaml`). One person from Emerging Services (@hunterkepley / @himdel / @MilanPospisil / @cshiels-ie), and one person from Analytics HCC (@dmzoneill / @AparnaKarve) must approve. DO NOT merge until both teams have approved the changes. [Contract here](https://handbook.eng.ansible.com/Teams/Emerging-Services-Team/Metrics-Utility/Contracts/billing-analytics-contract)"
             });
 
       - name: Send Slack notification
+        if: github.event.pull_request.head.repo.full_name == github.repository
         run: |
           curl -X POST "${{ secrets.SLACK_CLOUD_WEBHOOK_URL }}" \
             -H 'Content-Type: application/json' \

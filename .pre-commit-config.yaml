@@ -4,3 +4,12 @@ repos:
     hooks:
       - id: ruff-check
       - id: ruff-format
+
+  - repo: local
+    hooks:
+      - id: privacy-guard
+        name: privacy-guard
+        entry: uv run python -m tools.privacy_guard check-diff --staged
+        language: system
+        pass_filenames: false
+        stages: [pre-commit]

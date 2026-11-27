@@ -1,0 +1,143 @@
+name: Privacy guard
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  privacy-deterministic:
+    name: Privacy checks (blocking)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+
+      - name: Set up Python
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v6
+        with:
+          python-version-file: "pyproject.toml"
+
+      - name: Install dependencies
+        run: uv sync
+
+      - name: Check privacy contracts in the diff
+        run: uv run python -m tools.privacy_guard check-diff --base "origin/${{ github.base_ref }}"
+
+      - name: Run synthetic privacy canaries
+        run: uv run pytest metrics_utility/test/privacy -v
+
+  ai-privacy-review:
+    name: AI privacy review (advisory)
+    runs-on: ubuntu-latest
+    # Advisory only: a failure here must never block a merge.
+    continue-on-error: true
+    # GitHub does not allow `secrets.*` in a job-level `if`. Run on same-repo
+    # PRs (where secrets exist) and let the step-level env check decide whether
+    # an API key is actually configured. Fork PRs can opt in with the
+    # PRIVACY_AI_ENABLED repository variable; secrets are never sent to forks.
+    if: |
+      github.event.pull_request.head.repo.full_name == github.repository ||
+      vars.PRIVACY_AI_ENABLED == 'true'
+    permissions:
+      contents: read
+      pull-requests: write
+    env:
+      PRIVACY_AI_PROVIDER: ${{ vars.PRIVACY_AI_PROVIDER }}
+      PRIVACY_AI_API_URL: ${{ vars.PRIVACY_AI_API_URL }}
+      PRIVACY_AI_MODEL: ${{ vars.PRIVACY_AI_MODEL }}
+      PRIVACY_AI_API_KEY: ${{ secrets.PRIVACY_AI_API_KEY }}
+    steps:
+      - name: Detect AI review configuration
+        id: config
+        run: |
+          if [ -n "$PRIVACY_AI_API_KEY" ]; then
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::PRIVACY_AI_API_KEY is not configured; skipping the AI privacy review."
+          fi
+
+      - name: Checkout
+        if: steps.config.outputs.configured == 'true'
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Install uv
+        if: steps.config.outputs.configured == 'true'
+        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+
+      - name: Set up Python
+        if: steps.config.outputs.configured == 'true'
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v6
+        with:
+          python-version-file: "pyproject.toml"
+
+      - name: Run AI privacy review
+        id: review
+        if: steps.config.outputs.configured == 'true'
+        run: |
+          uv run python -m tools.privacy_guard ai-review \
+            --base "origin/${{ github.base_ref }}" \
+            --allow-skip-unconfigured \
+            --format markdown \
+            --output privacy-ai-review.md
+
+      - name: Post or update sticky PR comment
+        if: steps.config.outputs.configured == 'true' && steps.review.outcome == 'success'
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          script: |
+            const fs = require('fs');
+            const marker = '<!-- privacy-guard-ai-review -->';
+            const outputPath = 'privacy-ai-review.md';
+
+            if (!fs.existsSync(outputPath)) {
+              core.info('No AI review output was produced; skipping comment.');
+              return;
+            }
+
+            const body = fs.readFileSync(outputPath, 'utf8').trim();
+            if (!body) {
+              core.info('AI review output is empty; skipping comment.');
+              return;
+            }
+
+            const { owner, repo } = context.repo;
+            const issue_number = context.payload.pull_request.number;
+            const comments = await github.paginate(github.rest.issues.listComments, {
+              owner,
+              repo,
+              issue_number,
+              per_page: 100,
+            });
+
+            const existing = comments.find((comment) => comment.body && comment.body.includes(marker));
+            const content = `${marker}\n${body}`;
+
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner,
+                repo,
+                comment_id: existing.id,
+                body: content,
+              });
+              core.info(`Updated sticky AI privacy review comment ${existing.id}.`);
+            } else {
+              await github.rest.issues.createComment({
+                owner,
+                repo,
+                issue_number,
+                body: content,
+              });
+              core.info('Created sticky AI privacy review comment.');
+            }
