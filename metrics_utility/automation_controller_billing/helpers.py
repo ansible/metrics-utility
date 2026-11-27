@@ -12,6 +12,10 @@ from metrics_utility.library.collectors.controller.config import _datetime_hook
 from metrics_utility.logger import logger
 
 
+# Exact scalar types returned unchanged by make_hashable().
+_SCALAR_TYPES = frozenset({str, int, float, bool})
+
+
 def get_last_entries_from_db() -> dict:
     """
     Get AUTOMATION_ANALYTICS_LAST_ENTRIES directly from database.
@@ -139,7 +143,7 @@ def merge_json_sets(json_values):
     """
     merged = {}
     for val in json_values:
-        d = parse_json(val)
+        d = val if type(val) is dict else parse_json(val)
         if isinstance(d, dict):
             for key, value in d.items():
                 # Ignore null (None) or empty string values.
@@ -147,9 +151,17 @@ def merge_json_sets(json_values):
                 # Use != (not set membership): nested dict values are unhashable (AAP-101848).
                 if value is not None and value != '' and value != 'NA':
                     if isinstance(value, set):
-                        merged.setdefault(key, set()).update(make_hashable(v) for v in value)
+                        # Set members are already hashable; copy on insert to avoid mutating caller sets.
+                        if key in merged:
+                            merged[key].update(value)
+                        else:
+                            merged[key] = set(value)
                     else:
-                        merged.setdefault(key, set()).add(make_hashable(value))
+                        item = value if type(value) in _SCALAR_TYPES else make_hashable(value)
+                        if key in merged:
+                            merged[key].add(item)
+                        else:
+                            merged[key] = {item}
     return merged
 
 

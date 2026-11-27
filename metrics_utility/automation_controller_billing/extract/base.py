@@ -189,10 +189,11 @@ class Base:
         return bool(set(sheet_options) & set(sheets_required))
 
     def filter_tarball_paths(self, paths, collections):
-        """Return all .tar.gz candidates, ignoring other objects and partition markers.
+        """Skip partition markers and archive checksums, preserving candidate order.
 
         Package.make_tgz names a mixed archive after its last collection. Even a
         recognized suffix cannot rule out other collections inside the archive.
+        S3 also supports renamed archives without a standard extension.
 
         Raises:
             :exc:`~metrics_utility.exceptions.MetricsException`: If
@@ -204,7 +205,7 @@ class Base:
                 if key in collections:
                     raise MetricsException(f'{key} is not a valid tarball name filter')
 
-        return [path for path in paths if path.endswith('.tar.gz')]
+        return [path for path in paths if os.path.basename(path) not in ('', '_SUCCESS') and not path.endswith('.tar.gz.sha256')]
 
 
 def _write_member(member_path, file_obj, max_size, total_extracted_size):
@@ -238,9 +239,11 @@ def _safe_extract(tar_path, extract_path, max_files=100, max_size=1024 * 1024 * 
 
     # Ensure the extraction directory exists
     os.makedirs(extract_path, exist_ok=True)
+    extract_path_abs = os.path.abspath(extract_path)
 
     with tarfile.open(tar_path, 'r:*') as tar:
-        for member in tar.getmembers():
+        # Stream members in one pass to avoid rewinding gzip archives.
+        for member in tar:
             # Skip directories and links
             if member.isdir():
                 continue
@@ -259,7 +262,6 @@ def _safe_extract(tar_path, extract_path, max_files=100, max_size=1024 * 1024 * 
 
             # Build a fully qualified path for this member and ensure it stays within extract_path
             member_path = os.path.abspath(os.path.join(extract_path, member.name))
-            extract_path_abs = os.path.abspath(extract_path)
             if not member_path.startswith(extract_path_abs + os.sep):
                 logger.warning(f'Skipping potentially unsafe file (path traversal): {member.name}')
                 continue

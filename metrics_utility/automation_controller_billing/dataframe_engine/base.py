@@ -8,7 +8,7 @@ import pandas as pd
 
 from dateutil.relativedelta import relativedelta
 
-from metrics_utility.automation_controller_billing.helpers import make_hashable
+from metrics_utility.automation_controller_billing.helpers import _SCALAR_TYPES, make_hashable
 
 
 def granularity_cast(date, granularity):
@@ -87,6 +87,9 @@ def combine_set(set1, set2):
     If an input is a list, it is first converted to a set.
     If an input is not a list or a set, it is treated as empty.
     """
+    if type(set1) is set and type(set2) is set:
+        return set1 | set2
+
     # Convert to set if input is a list; otherwise, if not a set, default to an empty set.
     if isinstance(set1, list):
         set1 = set(set1)
@@ -140,14 +143,25 @@ def combine_json_values(val1, val2):
         Dict mapping each key to a set of its distinct non-empty values from both dicts.
     """
     merged = {}
-    for d in [val1, val2]:
-        if isinstance(d, dict):
+    if not (isinstance(val1, dict) and val1) and not (isinstance(val2, dict) and val2):
+        return merged
+
+    for d in (val1, val2):
+        if isinstance(d, dict) and d:
             for key, value in d.items():
                 if value is not None and value != '':
                     if isinstance(value, set):
-                        merged.setdefault(key, set()).update(make_hashable(v) for v in value)
+                        # Set members are already hashable; copy on insert to avoid mutating caller sets.
+                        if key in merged:
+                            merged[key].update(value)
+                        else:
+                            merged[key] = set(value)
                     else:
-                        merged.setdefault(key, set()).add(make_hashable(value))
+                        item = value if type(value) in _SCALAR_TYPES else make_hashable(value)
+                        if key in merged:
+                            merged[key].add(item)
+                        else:
+                            merged[key] = {item}
 
     return merged
 

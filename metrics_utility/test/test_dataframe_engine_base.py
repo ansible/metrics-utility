@@ -170,6 +170,46 @@ class TestCombineSet:
     def test_empty_inputs(self):
         assert combine_set(set(), set()) == set()
 
+    def test_two_sets_returns_new_set_and_does_not_mutate_inputs(self):
+        left = {1, 2}
+        right = {2, 3}
+        result = combine_set(left, right)
+        assert result == {1, 2, 3}
+        assert result is not left and result is not right
+        result.add(4)
+        assert left == {1, 2}
+        assert right == {2, 3}
+
+    def test_two_sets_same_object_does_not_mutate(self):
+        left = {1, 2}
+        result = combine_set(left, left)
+        assert result == {1, 2}
+        assert result is not left
+
+    def test_set_subclass_is_handled_without_mutation(self):
+        class MySet(set):
+            pass
+
+        left = MySet({1, 2})
+        right = MySet({2, 3})
+        result = combine_set(left, right)
+        assert result == {1, 2, 3}
+        assert left == {1, 2}
+        assert right == {2, 3}
+
+    def test_lists_are_not_mutated(self):
+        left = [1, 2, 2]
+        right = [2, 3]
+        result = combine_set(left, right)
+        assert result == {1, 2, 3}
+        assert left == [1, 2, 2]
+        assert right == [2, 3]
+
+    def test_nan_and_none_treated_as_empty(self):
+        assert combine_set(float('nan'), float('nan')) == set()
+        assert combine_set(None, float('nan')) == set()
+        assert combine_set(float('nan'), {1}) == {1}
+
 
 # ---------------------------------------------------------------------------
 # merge_sets
@@ -245,6 +285,67 @@ class TestCombineJsonValues:
         tags_value = next(iter(result['tags']))
         assert isinstance(tags_value, HashableDict)
         assert tags_value == {'Name': 'test-instance', 'Env': 'prod'}
+
+    def test_nested_tuple_frozenset_and_list_values(self):
+        result = combine_json_values(
+            {'t': (1, 2), 'f': frozenset({'a'}), 'l': [1, 2]},
+            {'t': (1, 2), 'f': frozenset({'b'}), 'l': [1, 2]},
+        )
+        assert result == {
+            't': {(1, 2)},
+            'f': {frozenset({'a'}), frozenset({'b'})},
+            'l': {(1, 2)},
+        }
+
+    def test_deeply_nested_values_are_hashable(self):
+        from metrics_utility.automation_controller_billing.helpers import HashableDict
+
+        result = combine_json_values(
+            {'meta': {'a': [{'b': 1}]}},
+            {'meta': {'a': [{'b': 1}]}},
+        )
+        assert len(result['meta']) == 1
+        (value,) = result['meta']
+        assert isinstance(value, HashableDict)
+
+    def test_na_value_is_preserved(self):
+        """Unlike merge_json_sets, combine_json_values does not filter 'NA'."""
+        result = combine_json_values({'serial': 'NA'}, {'serial': 'abc'})
+        assert result == {'serial': {'NA', 'abc'}}
+
+    def test_input_sets_are_not_mutated(self):
+        first = {'x', 'y'}
+        second = {'y', 'z'}
+        result = combine_json_values({'a': first}, {'a': second})
+        assert result == {'a': {'x', 'y', 'z'}}
+        assert first == {'x', 'y'}
+        assert second == {'y', 'z'}
+        assert result['a'] is not first and result['a'] is not second
+
+    def test_single_set_value_is_copied(self):
+        original = {'x'}
+        result = combine_json_values({'a': original}, {})
+        # Short-circuit treats an empty second dict as no input, but the set is still copied.
+        assert result == {'a': {'x'}}
+        assert result['a'] is not original
+        result['a'].add('y')
+        assert original == {'x'}
+
+    def test_input_dicts_are_not_mutated(self):
+        first = {'a': 'x', 'nested': {'k': 1}}
+        second = {'a': 'y'}
+        combine_json_values(first, second)
+        assert first == {'a': 'x', 'nested': {'k': 1}}
+        assert second == {'a': 'y'}
+
+    def test_scalar_types_are_preserved(self):
+        result = combine_json_values({'i': 1, 'f': 1.5, 'b': True, 's': 'x'}, {})
+        assert result == {'i': {1}, 'f': {1.5}, 'b': {True}, 's': {'x'}}
+
+    @pytest.mark.parametrize('empty1', [None, {}, float('nan'), pd.NA])
+    @pytest.mark.parametrize('empty2', [None, {}, float('nan'), pd.NA])
+    def test_empty_or_missing_inputs_short_circuit(self, empty1, empty2):
+        assert combine_json_values(empty1, empty2) == {}
 
 
 # ---------------------------------------------------------------------------

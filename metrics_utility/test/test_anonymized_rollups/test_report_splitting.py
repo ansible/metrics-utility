@@ -22,7 +22,7 @@ from metrics_utility.test.util import cleanup_glob as _cleanup_glob
 file_glob = './out/test_report_splitting/*.json'
 
 
-@pytest.fixture(scope='function')
+@pytest.fixture
 def cleanup_test_data():
     yield
     _cleanup_glob(file_glob)
