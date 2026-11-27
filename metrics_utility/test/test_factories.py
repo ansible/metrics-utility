@@ -188,6 +188,14 @@ def _df_factory(report_type):
 
 
 class TestDataframeFactory:
+    def test_explicit_date_range_does_not_require_a_month(self):
+        since = datetime.date(2024, 2, 28)
+        until = datetime.date(2024, 3, 1)
+        params = {'report_type': 'CCSP', 'since_date': since, 'until_date': until}
+        engines = DataframeFactory(None, None, params).create()
+
+        assert engines['main_host'].dates() == [since, datetime.date(2024, 2, 29), until]
+
     def test_ccsp_returns_expected_engines(self):
         result = _df_factory('CCSP').create()
         assert isinstance(result['job_host_summary'], DataframeJobhostSummaryUsage)

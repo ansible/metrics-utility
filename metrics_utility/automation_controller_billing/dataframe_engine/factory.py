@@ -21,7 +21,7 @@ class Factory:  # DataframeFactory
         """
         self.extractor = extractor
         self.extra_params = extra_params if extra_params is not None else {}
-        self.month = month if month is not None else self.extra_params['month_since']
+        self.month = month if month is not None else self.extra_params.get('month_since')
 
     def create(self):
         """Return a dict of dataframe engine instances for the configured report type.
