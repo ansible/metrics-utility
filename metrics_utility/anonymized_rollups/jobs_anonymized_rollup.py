@@ -13,6 +13,21 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
     Collector - unified_jobs collector data
     """
 
+    STATS_NUMERIC_COLUMNS = [
+        'jobs_total',
+        'jobs_failed_total',
+        'jobs_successful_total',
+        'jobs_never_started_total',
+        'jobs_duration_total_seconds',
+        'jobs_successful_duration_total_seconds',
+        'jobs_failed_duration_total_seconds',
+        'job_waiting_time_total_seconds',
+        'templates_total',
+        'inventories_total',
+    ]
+
+    STATS_LIST_COLUMNS = ['templates', 'inventories', 'ansible_versions', 'job_types']
+
     def _convert_id_columns_to_strings(self, dataframe):
         """Convert ID columns to strings at the beginning of prepare().
 
@@ -261,70 +276,6 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
         # Sanitize to convert NumPy types to native Python types for JSON serialization
         return sanitize_json(result)
 
-    def _merge_stats_json(self, stats_all, stats_new, groupby_col):
-        """Merge two stats JSON lists by summing numeric columns and unioning lists."""
-        if not stats_all:
-            return stats_new or []
-        if not stats_new:
-            return stats_all or []
-
-        # Create lookup dictionaries keyed by grouping column
-        all_dict = {item.get(groupby_col): item.copy() for item in stats_all}
-        new_dict = {item.get(groupby_col): item.copy() for item in stats_new}
-
-        # Merge items
-        merged_list = []
-        all_keys = set(all_dict.keys()) | set(new_dict.keys())
-
-        # Numeric columns to sum
-        numeric_cols = [
-            'jobs_total',
-            'jobs_failed_total',
-            'jobs_successful_total',
-            'jobs_never_started_total',
-            'jobs_duration_total_seconds',
-            'jobs_successful_duration_total_seconds',
-            'jobs_failed_duration_total_seconds',
-            'job_waiting_time_total_seconds',
-            'templates_total',
-            'inventories_total',
-        ]
-
-        # List columns to union
-        list_cols = ['templates', 'inventories', 'ansible_versions', 'job_types']
-
-        for key in all_keys:
-            item_all = all_dict.get(key, {})
-            item_new = new_dict.get(key, {})
-            merged_item = self._create_merged_item(item_all, item_new, numeric_cols, list_cols)
-            if merged_item:
-                merged_list.append(merged_item)
-
-        return merged_list
-
-    def _create_merged_item(self, item_all, item_new, numeric_cols, list_cols):
-        """Create a merged item from two items, handling None/empty cases."""
-        if not item_all and not item_new:
-            return None
-
-        merged_item = item_all.copy() if item_all else item_new.copy()
-
-        if item_all and item_new:
-            self._merge_numeric_columns(merged_item, item_all, item_new, numeric_cols)
-            self._merge_max_columns(merged_item, item_all, item_new)
-            self._merge_min_columns(merged_item, item_all, item_new)
-            self._merge_list_columns(merged_item, item_all, item_new, list_cols)
-            self._recompute_totals(merged_item)
-
-        return merged_item
-
-    def _merge_numeric_columns(self, merged_item, item_all, item_new, numeric_cols):
-        """Sum numeric columns from both items."""
-        for col in numeric_cols:
-            val_all = item_all.get(col) if item_all.get(col) is not None else 0
-            val_new = item_new.get(col) if item_new.get(col) is not None else 0
-            merged_item[col] = val_all + val_new
-
     def _merge_max_value(self, val_all, val_new):
         """Return the maximum of two nullable values."""
         if val_all is not None and val_new is not None:
@@ -337,26 +288,15 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
             return min(val_all, val_new)
         return val_all if val_all is not None else val_new
 
-    def _merge_max_columns(self, merged_item, item_all, item_new):
-        """Take maximum value for max columns."""
+    def _merge_extreme_columns(self, merged_item, item_all, item_new):
+        """Take maximum and minimum values for extreme columns."""
         for col in ['job_duration_maximum_seconds', 'job_waiting_time_maximum_seconds']:
             if col in merged_item:
                 merged_item[col] = self._merge_max_value(item_all.get(col), item_new.get(col))
 
-    def _merge_min_columns(self, merged_item, item_all, item_new):
-        """Take minimum value for min columns."""
         for col in ['job_duration_minimum_seconds', 'job_waiting_time_minimum_seconds']:
             if col in merged_item:
                 merged_item[col] = self._merge_min_value(item_all.get(col), item_new.get(col))
-
-    def _merge_list_columns(self, merged_item, item_all, item_new, list_cols):
-        """Union list columns from both items."""
-        for col in list_cols:
-            list_all = item_all.get(col) if item_all.get(col) is not None else []
-            list_new = item_new.get(col) if item_new.get(col) is not None else []
-            set_all = set(list_all) if isinstance(list_all, list) else set()
-            set_new = set(list_new) if isinstance(list_new, list) else set()
-            merged_item[col] = sorted(set_all.union(set_new))
 
     def _recompute_totals(self, merged_item):
         """Recompute totals from list columns."""
@@ -372,23 +312,9 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
         if not stats_new:
             return stats_all
 
-        numeric_cols = [
-            'jobs_total',
-            'jobs_failed_total',
-            'jobs_successful_total',
-            'jobs_never_started_total',
-            'jobs_duration_total_seconds',
-            'jobs_successful_duration_total_seconds',
-            'jobs_failed_duration_total_seconds',
-            'job_waiting_time_total_seconds',
-            'templates_total',
-            'inventories_total',
-        ]
-        list_cols = ['templates', 'inventories', 'ansible_versions', 'job_types']
-
         item_all = stats_all[0]
         item_new = stats_new[0]
-        merged_item = self._create_merged_item(item_all, item_new, numeric_cols, list_cols)
+        merged_item = self._create_merged_item(item_all, item_new, self.STATS_NUMERIC_COLUMNS, self.STATS_LIST_COLUMNS)
         return [merged_item] if merged_item else []
 
     def _merge_list_fields(self, data_all, data_new, field_name):

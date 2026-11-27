@@ -1,12 +1,10 @@
 """Anonymized rollup for controller_version_service collector data."""
 
-import pandas as pd
-
-from metrics_utility.anonymized_rollups.base_anonymized_rollup import BaseAnonymizedRollup
+from metrics_utility.anonymized_rollups.base_anonymized_rollup import SnapshotAnonymizedRollup
 from metrics_utility.anonymized_rollups.helpers import sanitize_json
 
 
-class ControllerVersionAnonymizedRollup(BaseAnonymizedRollup):
+class ControllerVersionAnonymizedRollup(SnapshotAnonymizedRollup):
     """
     Collector - controller_version_service collector data
     """
@@ -32,19 +30,5 @@ class ControllerVersionAnonymizedRollup(BaseAnonymizedRollup):
         # Sanitize to convert NumPy types to native Python types for JSON serialization
         return sanitize_json(controller_versions)
 
-    def merge(self, data_all, data_new):
-        """
-        For snapshot collectors, always pick new data (no merging needed).
-        """
-        return data_new
-
-    def base(self, data):
-        """
-        Returns the data as-is (data is already computed by prepare).
-        Safeguard: if data is a dataframe, call prepare on it first.
-        """
-        if data is None:
-            return {'json': []}
-        if isinstance(data, pd.DataFrame):
-            data = self.prepare(data)
-        return {'json': data}
+    def _empty_json(self):
+        return []
