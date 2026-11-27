@@ -124,8 +124,7 @@ class Command(BaseCommand):
         if not tgzfiles:
             logger.error('No analytics collected')
             raise NoAnalyticsCollected('No analytics collected')
-        if tgzfiles:
-            logger.info('Analytics collected')
+        logger.info('Analytics collected')
 
     def _handle_ship_target(self, ship_target):
         """Validate the ship target and return configuration parameters.

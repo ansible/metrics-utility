@@ -26,21 +26,6 @@ def serial_from_facts(canonical_facts):
     return facts.get('ansible_product_serial', '') + '/' + facts.get('ansible_machine_id', '')
 
 
-def compute_serial(row):
-    """Compute a serial key from a host row.
-
-    Kept for callers that already hold a row; prefer :func:`serial_from_facts`
-    when working with a ``canonical_facts`` column.
-
-    Args:
-        row: pandas Series with a ``canonical_facts`` field.
-
-    Returns:
-        Compound serial string or None; see :func:`serial_from_facts`.
-    """
-    return serial_from_facts(row['canonical_facts'])
-
-
 # dataframe for main_host
 class DataframeInventoryScope(Base):
     """Aggregates host inventory data from main_host/main_host_daily CSV batches."""

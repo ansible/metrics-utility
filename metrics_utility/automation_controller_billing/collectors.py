@@ -60,7 +60,7 @@ def daily_slicing(key, last_gather, **kwargs):
     """Generate time slices aligned to calendar-day boundaries for hourly collectors.
 
     Yields ``(start, end)`` pairs that never cross a midnight boundary, each
-    spanning at most ``METRICS_UTILITY_GATHER_INTERVAL_HOURS`` hours.
+    spanning at most one day (``timedelta(days=1)``).
 
     Args:
         key: Collector key name used to look up the last-gathered entry.

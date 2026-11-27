@@ -300,17 +300,6 @@ def _build_statistics(
     return statistics
 
 
-def _inject_controller_version(jobs_by_controller_version: list[dict[str, Any]], controller_versions: list[str]) -> list[dict[str, Any]]:
-    """Inject the first controller_version from the controller_versions list into the
-    single-item jobs_by_controller_version summary."""
-    if not jobs_by_controller_version:
-        return jobs_by_controller_version
-
-    first_version = controller_versions[0] if controller_versions else None
-    jobs_by_controller_version[0]['controller_version'] = first_version
-    return jobs_by_controller_version
-
-
 def _inject_controller_version_to_all_items(jobs_list: list[dict[str, Any]], controller_versions: list[str]) -> list[dict[str, Any]]:
     """Inject the first controller_version from the controller_versions list into every
     item of the given jobs grouping list."""
@@ -476,7 +465,7 @@ def flatten_json_report(data: dict[str, Any]) -> AnonymizedPayload:
     # Build jobs_by_controller_version: inject first controller_version from the controller_version collector
     jobs_by_controller_version: list[dict[str, Any]] = jobs.get('jobs_by_controller_version', []) or []
     controller_versions: list[str] = _as_list(controller_version_root)
-    jobs_by_controller_version = _inject_controller_version(jobs_by_controller_version, controller_versions)
+    jobs_by_controller_version = _inject_controller_version_to_all_items(jobs_by_controller_version, controller_versions)
 
     # Inject controller_version into every item of the three job groupings
     jobs_by_job_type_merged = _inject_controller_version_to_all_items(jobs_by_job_type_merged, controller_versions)

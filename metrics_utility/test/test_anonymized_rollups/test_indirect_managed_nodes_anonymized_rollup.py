@@ -4,8 +4,7 @@ import pandas as pd
 
 from metrics_utility.anonymized_rollups.indirect_managed_nodes_anonymized_rollup import (
     IndirectManagedNodesAnonymizedRollup,
-    _extract_collection_names,
-    _extract_module_names,
+    _extract_collection_and_module_names,
 )
 
 
@@ -335,25 +334,30 @@ def test_base_handles_none():
     assert result == {'json': {'indirect_nodes_total': 0, 'by_collection': [], 'by_module': []}}
 
 
-def test_extract_collection_names_with_nan():
-    """_extract_collection_names returns empty set for NaN (float) input."""
-    assert _extract_collection_names(float('nan')) == set()
+def test_extract_collection_and_module_names_returns_both_sets():
+    """The helper returns collection prefixes and full FQCN module names."""
+    collections, modules = _extract_collection_and_module_names('["cisco.ios.ios_command", "azure.azcollection.azure_rm_vm"]')
+    assert collections == {'cisco.ios', 'azure.azcollection'}
+    assert modules == {'cisco.ios.ios_command', 'azure.azcollection.azure_rm_vm'}
 
 
-def test_extract_collection_names_with_invalid_json():
-    """_extract_collection_names returns empty set for malformed JSON."""
-    assert _extract_collection_names('not valid json') == set()
+def test_extract_collection_and_module_names_skips_non_fqcn():
+    """Entries without a namespace.collection prefix are skipped by both sets."""
+    collections, modules = _extract_collection_and_module_names('["cisco.ios.ios_command", "builtin_module"]')
+    assert collections == {'cisco.ios'}
+    assert modules == {'cisco.ios.ios_command'}
 
 
-def test_extract_collection_names_with_unsupported_type():
-    """_extract_collection_names returns empty set for unsupported types."""
-    assert _extract_collection_names(42) == set()
+def test_extract_collection_and_module_names_handles_unparseable_values():
+    """NaN, malformed JSON, unsupported types, and None yield empty sets."""
+    for value in (float('nan'), 'not valid json', 42, None):
+        assert _extract_collection_and_module_names(value) == (set(), set())
 
 
-def test_extract_collection_names_skips_non_fqcn():
-    """_extract_collection_names skips entries that are not valid FQCNs."""
-    result = _extract_collection_names('["cisco.ios.ios_command", "builtin_module"]')
-    assert result == {'cisco.ios'}
+def test_extract_collection_and_module_names_with_non_list_json():
+    """JSON that decodes to a non-list (null, number, object) yields empty sets."""
+    for value in ('null', '42', '{}'):
+        assert _extract_collection_and_module_names(value) == (set(), set())
 
 
 def test_prepare_skips_nan_host_name():
@@ -455,45 +459,6 @@ def test_collector_names():
     """collector_names is set correctly."""
     rollup = IndirectManagedNodesAnonymizedRollup()
     assert rollup.collector_names == ['main_indirectmanagednodeaudit']
-
-
-# --- module-level tests ---
-
-
-def test_extract_module_names_returns_full_fqcn():
-    """_extract_module_names returns the full FQCN, not just the collection prefix."""
-    result = _extract_module_names('["cisco.ios.ios_command", "azure.azcollection.azure_rm_vm"]')
-    assert result == {'cisco.ios.ios_command', 'azure.azcollection.azure_rm_vm'}
-
-
-def test_extract_module_names_skips_non_fqcn():
-    """_extract_module_names skips entries without a valid namespace.collection prefix."""
-    result = _extract_module_names('["cisco.ios.ios_command", "builtin_module"]')
-    assert result == {'cisco.ios.ios_command'}
-
-
-def test_extract_module_names_with_nan():
-    """_extract_module_names returns empty set for NaN input."""
-    assert _extract_module_names(float('nan')) == set()
-
-
-def test_extract_module_names_with_invalid_json():
-    """_extract_module_names returns empty set for malformed JSON."""
-    assert _extract_module_names('not valid json') == set()
-
-
-def test_extract_collection_names_with_non_list_json():
-    """_extract_collection_names returns empty set when JSON decodes to a non-list (null, number, object)."""
-    assert _extract_collection_names('null') == set()
-    assert _extract_collection_names('42') == set()
-    assert _extract_collection_names('{}') == set()
-
-
-def test_extract_module_names_with_non_list_json():
-    """_extract_module_names returns empty set when JSON decodes to a non-list (null, number, object)."""
-    assert _extract_module_names('null') == set()
-    assert _extract_module_names('42') == set()
-    assert _extract_module_names('{}') == set()
 
 
 def test_prepare_groups_by_module():

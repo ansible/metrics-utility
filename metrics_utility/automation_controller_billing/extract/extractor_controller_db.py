@@ -21,8 +21,6 @@ class ExtractorControllerDB:
         Args:
             extra_params: Dict containing at least ``'opt_since'`` (datetime).
         """
-        super().__init__()
-
         self.extra_params = extra_params
 
     def iter_batches(self):
