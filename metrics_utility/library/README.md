@@ -55,12 +55,18 @@ Controller collectors (in `metrics_utility.library.collectors.controller`):
 * `table_metadata(db).gather() -> DataFrame`
 * `unified_job_template_table(db).gather() -> DataFrame`
 * `unified_jobs(db, since, until).gather() -> DataFrame`
-* `unified_jobs_dashboard(db, since, until).gather() -> DataFrame`
+* `unified_jobs_dashboard(db, since, until, after_id=None, batch_size=None, job_ids=None).gather() -> DataFrame`
 * `workflow_job_node_table(db, since, until).gather() -> DataFrame`
 * `workflow_job_template_node_table(db).gather() -> DataFrame`
 
 Dashboard collectors (in `metrics_utility.library.collectors.dashboard`):
 * `dashboard_jobs(...)` - plus the `AWXJobType`, `AWXJobHostSummaryType`, `DashboardJobsResultType` types and the `get_min_max_job_id_query` query helper
+* `get_job_labels_for_ids_query(job_ids)`, `get_job_host_summaries_for_ids_query(job_ids)` - labels and host summaries of known jobs
+* daily dashboard reconciliation query helpers, each filtering jobs by `finished` in `[since, until)` and the given statuses:
+  * `get_job_minute_aggregate_query(since, until, statuses)` - job count and SHA-256 digest of the job IDs per finish minute (`job_ids_digest(job_ids)` computes the same digest in Python)
+  * `get_job_ids_for_minutes_query(since, until, statuses, minutes)` - IDs and finish times of the jobs in the given minutes
+  * `get_job_host_summary_counts_query(since, until, statuses)` - host summary count per job
+  * `get_job_label_counts_query(since, until, statuses)` - label count per job
 
 Service collectors (in `metrics_utility.library.collectors.service`):
 * `task_executions_service(...)`

@@ -26,6 +26,15 @@ def fixed_now():
 
 
 @pytest.fixture
+def reconcile_jobs():
+    """Fixed dashboard reconciliation jobs inserted into the Controller test database, rolled back afterwards."""
+    from metrics_utility.test.library.dashboard import reconcile_data
+
+    with reconcile_data.reconcile_jobs() as inserted:
+        yield inserted
+
+
+@pytest.fixture
 def setup_processed_dataframe(fixed_now):
     """
     Sets up a processed Pandas DataFrame ready for use by report methods.
