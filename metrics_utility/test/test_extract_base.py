@@ -8,7 +8,7 @@ import tempfile
 
 import pytest
 
-from metrics_utility.automation_controller_billing.extract.base import Base, _member_destination, _safe_extract
+from metrics_utility.automation_controller_billing.extract.base import Base, _safe_extract
 from metrics_utility.exceptions import MetricsException
 
 
@@ -183,6 +183,8 @@ def _make_tarball(path, members):
 
 class TestSafeExtract:
     def test_enabled_collection_cannot_resolve_to_sibling_directory(self, tmp_path):
+        from metrics_utility.automation_controller_billing.extract.base import _member_destination
+
         root = tmp_path / 'billing'
         sibling_member = tmp_path / 'billing-backup' / 'main_host.csv'
 
