@@ -63,37 +63,7 @@ class DataframeInventoryScope(Base):
                 if billing_data.empty:
                     continue
 
-                billing_data['organization_name'] = billing_data.organization_name.fillna('No organization name')
-                billing_data['install_uuid'] = data['config']['install_uuid']
-
-                # Store the original host name for mapping purposes
-                billing_data['original_host_name'] = billing_data['host_name']
-                if 'ansible_host_variable' in billing_data.columns:
-                    # Replace missing ansible_host_variable with host name
-                    billing_data['ansible_host_variable'] = billing_data.ansible_host_variable.fillna(billing_data['host_name'])
-                    # And use the new ansible_host_variable instead of host_name, since
-                    # what is in ansible_host_variable should be the actual host we count
-                    billing_data['host_name'] = billing_data['ansible_host_variable']
-
-                billing_data['last_automation'] = pd.to_datetime(billing_data['last_automation'], format='ISO8601').dt.tz_localize(None)
-
-                # Keep canonical_facts as the raw JSON strings; group() decodes
-                # them via merge_json_sets(), which accepts strings or dicts, so
-                # only the serial key needs a per-row parse here.
-                billing_data['serial'] = billing_data['canonical_facts'].map(serial_from_facts)
-
-                experimental_dedup = self.extra_params.get('deduplicator') == 'ccsp-experimental'
-                if experimental_dedup:
-                    billing_data['host_names_before_dedup'] = billing_data['host_name']
-                else:
-                    # Always create the column for consistent structure, but keep it empty when dedup is not enabled
-                    billing_data['host_names_before_dedup'] = None
-
-                ################################
-                # Do the aggregation
-                ################################
-
-                billing_data_group = self.group(billing_data)
+                billing_data_group = self._group_inventory_batch(billing_data, data['config']['install_uuid'])
 
                 ################################
                 # Merge aggregations of multiple batches
@@ -105,6 +75,33 @@ class DataframeInventoryScope(Base):
             return self.empty()
 
         return billing_data_monthly_rollup.reset_index()
+
+    def _group_inventory_batch(self, billing_data, install_uuid):
+        billing_data['organization_name'] = billing_data.organization_name.fillna('No organization name')
+        billing_data['install_uuid'] = install_uuid
+
+        # Store the original host name for mapping purposes
+        billing_data['original_host_name'] = billing_data['host_name']
+        if 'ansible_host_variable' in billing_data.columns:
+            # Replace missing ansible_host_variable with host name
+            billing_data['ansible_host_variable'] = billing_data.ansible_host_variable.fillna(billing_data['host_name'])
+            # And use the new ansible_host_variable instead of host_name, since
+            # what is in ansible_host_variable should be the actual host we count
+            billing_data['host_name'] = billing_data['ansible_host_variable']
+
+        billing_data['last_automation'] = pd.to_datetime(billing_data['last_automation'], format='ISO8601').dt.tz_localize(None)
+
+        # Batches are non-empty here (skipped above) and canonical_facts
+        # is a single column, so the column can be read directly.
+        billing_data['serial'] = billing_data['canonical_facts'].map(serial_from_facts)
+
+        experimental_dedup = self.extra_params.get('deduplicator') == 'ccsp-experimental'
+        if experimental_dedup:
+            billing_data['host_names_before_dedup'] = billing_data['host_name']
+        else:
+            # Always create the column for consistent structure, but keep it empty when dedup is not enabled
+            billing_data['host_names_before_dedup'] = None
+        return self.group(billing_data)
 
     # Do the aggregation
     def group(self, dataframe):

@@ -17,6 +17,15 @@ from metrics_utility.automation_controller_billing.report.definition import Alig
 from metrics_utility.metric_utils import INDIRECT
 
 
+def _infra_facts_dict(facts):
+    if isinstance(facts, str):
+        try:
+            facts = json.loads(facts)
+        except (ValueError, RecursionError):
+            return {}
+    return facts if isinstance(facts, dict) else {}
+
+
 class Base:
     """Shared spreadsheet-building utilities for all billing report types.
 
@@ -374,7 +383,6 @@ class Base:
             cell.font = value_font
             return current_row + 1
 
-        # Parse facts to extract infra_type, infra_bucket, and device_type
         def extract_infra_info(facts):
             def extract_value(value):
                 if isinstance(value, set):
@@ -386,25 +394,8 @@ class Base:
                 else:
                     return 'Unknown'
 
-            if isinstance(facts, dict):
-                return {
-                    'infra_type': extract_value(facts.get('infra_type', 'Unknown')),
-                    'infra_bucket': extract_value(facts.get('infra_bucket', 'Unknown')),
-                    'device_type': extract_value(facts.get('device_type', 'Unknown')),
-                }
-            elif isinstance(facts, str):
-                import json
-
-                try:
-                    facts_dict = json.loads(facts)
-                    return {
-                        'infra_type': extract_value(facts_dict.get('infra_type', 'Unknown')),
-                        'infra_bucket': extract_value(facts_dict.get('infra_bucket', 'Unknown')),
-                        'device_type': extract_value(facts_dict.get('device_type', 'Unknown')),
-                    }
-                except Exception:
-                    pass
-            return {'infra_type': 'Unknown', 'infra_bucket': 'Unknown', 'device_type': 'Unknown'}
+            facts = _infra_facts_dict(facts)
+            return {key: extract_value(facts.get(key)) for key in ('infra_type', 'infra_bucket', 'device_type')}
 
         # Extract infrastructure information
         infra_info = indirect_nodes['facts'].apply(extract_infra_info)
@@ -424,6 +415,10 @@ class Base:
         # Sort by infrastructure type, then bucket, then device type
         summary_df = summary_df.sort_values(['infra_type', 'infra_bucket', 'device_type'])
 
+        return self._write_infrastructure_summary(ws, current_row, summary_df, header_font, value_font)
+
+    @staticmethod
+    def _write_infrastructure_summary(ws, current_row, summary_df, header_font, value_font):
         # Add all column headers
         headers = ['Infrastructure', 'Device Category', 'Device Type', 'Unique Nodes', 'Total Nodes']
         for c_idx, header in enumerate(headers, 1):
@@ -573,8 +568,12 @@ class Base:
         labels = {k: v for k, v in labels.items() if k in columns}
         ccsp_report_dataframe = ccsp_report_dataframe.rename(columns=labels)
 
+        return self._write_usage_rows(ws, current_row, ccsp_report_dataframe, header_font, value_font)
+
+    @staticmethod
+    def _write_usage_rows(ws, current_row, dataframe, header_font, value_font):
         row_counter = 0
-        rows = dataframe_to_rows(ccsp_report_dataframe, index=False)
+        rows = dataframe_to_rows(dataframe, index=False)
         for r_idx, row in enumerate(rows, current_row):
             for c_idx, value in enumerate(row, 1):
                 cell = ws.cell(row=r_idx, column=c_idx)

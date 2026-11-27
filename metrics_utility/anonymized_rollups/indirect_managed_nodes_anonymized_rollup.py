@@ -86,6 +86,14 @@ def _make_group_key(organization_name, collection_name):
     return f'{organization_name}{GROUP_KEY_SEPARATOR}{collection_name}'
 
 
+def _add_host_to_groups(groups, org_name, dimension, names, host_name):
+    for name in names:
+        key = _make_group_key(org_name, name)
+        if key not in groups:
+            groups[key] = {'organization_name': org_name, dimension: name, 'host_names': set()}
+        groups[key]['host_names'].add(host_name)
+
+
 class IndirectManagedNodesAnonymizedRollup(BaseAnonymizedRollup):
     """Rollup processor for main_indirectmanagednodeaudit collector data.
 
@@ -131,39 +139,13 @@ class IndirectManagedNodesAnonymizedRollup(BaseAnonymizedRollup):
             all_host_names.add(host_name)
 
             collection_names, module_names = _extract_collection_and_module_names(events)
-            if not collection_names:
-                collection_names = {'_no_collection'}
+            _add_host_to_groups(groups, org_name, 'collection', collection_names or {'_no_collection'}, host_name)
+            _add_host_to_groups(module_groups, org_name, 'module', module_names or {'_no_module'}, host_name)
 
-            for collection_name in collection_names:
-                key = _make_group_key(org_name, collection_name)
-                if key not in groups:
-                    groups[key] = {
-                        'organization_name': org_name,
-                        'collection': collection_name,
-                        'host_names': set(),
-                    }
-                groups[key]['host_names'].add(host_name)
-
-            if not module_names:
-                module_names = {'_no_module'}
-
-            for module_name in module_names:
-                key = _make_group_key(org_name, module_name)
-                if key not in module_groups:
-                    module_groups[key] = {
-                        'organization_name': org_name,
-                        'module': module_name,
-                        'host_names': set(),
-                    }
-                module_groups[key]['host_names'].add(host_name)
-
-        for group in groups.values():
-            group['host_names'] = sorted(group['host_names'])
-            group['host_count'] = len(group['host_names'])
-
-        for group in module_groups.values():
-            group['host_names'] = sorted(group['host_names'])
-            group['host_count'] = len(group['host_names'])
+        for group_dict in (groups, module_groups):
+            for group in group_dict.values():
+                group['host_names'] = sorted(group['host_names'])
+                group['host_count'] = len(group['host_names'])
 
         return sanitize_json(
             {

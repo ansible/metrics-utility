@@ -228,6 +228,14 @@ def _make_tarball(path, members):
 
 
 class TestSafeExtract:
+    def test_enabled_collection_cannot_resolve_to_sibling_directory(self, tmp_path):
+        from metrics_utility.automation_controller_billing.extract.base import _member_destination
+
+        root = tmp_path / 'billing'
+        sibling_member = tmp_path / 'billing-backup' / 'main_host.csv'
+
+        assert _member_destination(root, str(sibling_member), ['main_host']) is None
+
     def test_extracts_csv_files(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             tar_path = os.path.join(tmpdir, 'test.tar.gz')

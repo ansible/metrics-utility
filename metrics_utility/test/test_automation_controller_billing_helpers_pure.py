@@ -134,6 +134,10 @@ class TestMergeJsonSets:
         result = merge_json_sets(values)
         assert result == {'key': {'val'}}
 
+    def test_valid_json_non_objects_do_not_interrupt_merge(self):
+        values = ['{"cpu": "x86"}', '["not a fact map"]', 'null', '{"cpu": "arm"}']
+        assert merge_json_sets(values) == {'cpu': {'x86', 'arm'}}
+
     def test_nested_dict_values_are_hashable(self):
         """Nested dict facts (e.g. tags) must not raise TypeError (AAP-101848)."""
         values = [
@@ -252,6 +256,11 @@ class TestMakeHashable:
         left = HashableDict({'a': 1})
         right = HashableDict({'a': 2})
         assert left < right
+        assert left <= right
+        assert right > left
+        assert right >= left
+        assert left <= dict(left)
+        assert left >= dict(left)
         assert sorted([right, left]) == [left, right]
 
     def test_hashable_dict_lt_handles_incomparable_nested_values(self):
@@ -263,6 +272,15 @@ class TestMakeHashable:
         assert len(ordered) == 2
         assert left in ordered
         assert right in ordered
+
+    def test_inclusive_comparisons_preserve_dict_equality_on_json_tie(self):
+        original = {'ports': [22]}
+        normalized = make_hashable(original)
+        # JSON renders both a list and its hashable tuple as the same array.
+        assert normalized != original
+        for left, right in ((normalized, original), (original, normalized)):
+            assert (left <= right) == (left < right or left == right)
+            assert (left >= right) == (left > right or left == right)
 
     def test_hashable_dict_lt_non_dict_returns_not_implemented(self):
         assert HashableDict({'a': 1}).__lt__(5) is NotImplemented

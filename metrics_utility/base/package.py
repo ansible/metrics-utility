@@ -109,25 +109,30 @@ class Package:
                 return False
 
         if self.shipping_auth_mode() == self.SHIPPING_AUTH_S3_USERPASS:
-            if not self.get_s3_configured():
-                logger.error('S3 configuration is not set')
-                return False
+            return self._s3_shipping_configured()
 
-            if not self._get_rh_user():
-                logger.error('aws_access_key_id is not set')
-                return False
+        return True
 
-            if not self._get_rh_password():
-                logger.error('aws_secret_access_key is not set')
-                return False
+    def _s3_shipping_configured(self):
+        if not self.get_s3_configured():
+            logger.error('S3 configuration is not set')
+            return False
 
-            if not self._get_rh_region():
-                logger.error('aws_region is not set')
-                return False
+        if not self._get_rh_user():
+            logger.error('aws_access_key_id is not set')
+            return False
 
-            if not self._get_rh_bucket():
-                logger.error('aws_bucket is not set')
-                return False
+        if not self._get_rh_password():
+            logger.error('aws_secret_access_key is not set')
+            return False
+
+        if not self._get_rh_region():
+            logger.error('aws_region is not set')
+            return False
+
+        if not self._get_rh_bucket():
+            logger.error('aws_bucket is not set')
+            return False
 
         return True
 

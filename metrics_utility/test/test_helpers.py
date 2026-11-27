@@ -2,6 +2,9 @@
 Unit tests for helper functions.
 """
 
+import json
+
+import numpy as np
 import pytest
 
 from metrics_utility.anonymized_rollups.helpers import sanitize_json
@@ -49,6 +52,18 @@ def test_sanitize_json_with_tuple():
     assert result == [1, None, 3]
 
 
+def test_numpy_rollup_values_round_trip_through_strict_json():
+    obj = {
+        'count': np.int64(3),
+        'durations': (np.float32(1.25), np.float32('nan'), np.float32('inf'), np.float32('-inf')),
+        'daily': np.array([2.5, np.nan]),
+    }
+
+    encoded = json.dumps(sanitize_json(obj), allow_nan=False)
+
+    assert json.loads(encoded) == {'count': 3, 'durations': [1.25, None, None, None], 'daily': [2.5, None]}
+
+
 def test_sanitize_json_with_normal_values():
     """Test that normal values are not modified."""
     obj = {
@@ -90,8 +105,6 @@ def test_sanitize_json_with_complex_structure():
 
 def test_sanitize_json_json_serializable():
     """Test that the result can be serialized to JSON."""
-    import json
-
     obj = {
         'value1': float('nan'),
         'value2': float('inf'),

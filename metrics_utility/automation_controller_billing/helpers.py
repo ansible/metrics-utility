@@ -1,6 +1,7 @@
 """Helper utilities for the automation_controller_billing package."""
 
 import json
+import operator
 
 from itertools import chain
 
@@ -95,14 +96,28 @@ class HashableDict(dict):
         return hash(frozenset(self.items()))
 
     def __lt__(self, other):
+        return self._compare(other, operator.lt)
+
+    def __le__(self, other):
+        return self._compare(other, operator.lt, inclusive=True)
+
+    def __gt__(self, other):
+        return self._compare(other, operator.gt)
+
+    def __ge__(self, other):
+        return self._compare(other, operator.gt, inclusive=True)
+
+    def _compare(self, other, op, *, inclusive=False):
         if not isinstance(other, dict):
             return NotImplemented
+        if inclusive and self == other:
+            return True
         try:
-            return sorted(self.items()) < sorted(other.items())
+            return op(sorted(self.items()), sorted(other.items()))
         except TypeError:
             # Mixed/nested values under the same key can be incomparable; keep ordering
             # deterministic for report sorting (AAP-101848 / CodeRabbit follow-up).
-            return json.dumps(self, sort_keys=True) < json.dumps(other, sort_keys=True)
+            return op(json.dumps(self, sort_keys=True), json.dumps(other, sort_keys=True))
 
 
 def make_hashable(obj):
@@ -125,6 +140,21 @@ def make_hashable(obj):
     return obj
 
 
+def merge_fact_value(merged, key, value):
+    """Add a fact to the result without mutating an input set."""
+    if isinstance(value, set):
+        if key in merged:
+            merged[key].update(value)
+        else:
+            merged[key] = set(value)
+    else:
+        item = value if type(value) in _SCALAR_TYPES else make_hashable(value)
+        if key in merged:
+            merged[key].add(item)
+        else:
+            merged[key] = {item}
+
+
 def merge_json_sets(json_values):
     """Merge a sequence of JSON dict values into a mapping of key → set of non-null values.
 
@@ -144,24 +174,14 @@ def merge_json_sets(json_values):
     merged = {}
     for val in json_values:
         d = val if type(val) is dict else parse_json(val)
-        if isinstance(d, dict):
-            for key, value in d.items():
-                # Ignore null (None) or empty string values.
-                # We also want to ignore NA value used when facts are not available.
-                # Use != (not set membership): nested dict values are unhashable (AAP-101848).
-                if value is not None and value != '' and value != 'NA':
-                    if isinstance(value, set):
-                        # Set members are already hashable; copy on insert to avoid mutating caller sets.
-                        if key in merged:
-                            merged[key].update(value)
-                        else:
-                            merged[key] = set(value)
-                    else:
-                        item = value if type(value) in _SCALAR_TYPES else make_hashable(value)
-                        if key in merged:
-                            merged[key].add(item)
-                        else:
-                            merged[key] = {item}
+        if not isinstance(d, dict):
+            continue
+        for key, value in d.items():
+            # Ignore null (None) or empty string values.
+            # We also want to ignore NA value used when facts are not available.
+            # Use != (not set membership): nested dict values are unhashable (AAP-101848).
+            if value is not None and value != '' and value != 'NA':
+                merge_fact_value(merged, key, value)
     return merged
 
 

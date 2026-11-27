@@ -386,17 +386,16 @@ class DedupRenewalExperimental(BaseDedupRenewal):
             for serial in individual_serials:
                 if not serial:
                     continue
-                hostname_groups = groups_by_serial.get(serial)
-                if hostname_groups is not None and len(hostname_groups) > 1:
-                    serial_key = f'individual:{serial}'
-                    if serial_key not in serial_groups:
-                        hostname_groups_in_serial = list(hostname_groups)
-                        serial_groups[serial_key] = {
-                            'canonical_group': hostname_groups_in_serial[0],
-                            'groups_to_merge': hostname_groups_in_serial,
-                            'serial_type': 'individual',
-                        }
-                        processed_hostname_groups.update(hostname_groups_in_serial)
+                self._record_individual_serial(serial, groups_by_serial[serial], serial_groups, processed_hostname_groups)
+
+    @staticmethod
+    def _record_individual_serial(serial, hostname_groups, serial_groups, processed_hostname_groups):
+        serial_key = f'individual:{serial}'
+        if len(hostname_groups) <= 1 or serial_key in serial_groups:
+            return
+        groups = list(hostname_groups)
+        serial_groups[serial_key] = {'canonical_group': groups[0], 'groups_to_merge': groups, 'serial_type': 'individual'}
+        processed_hostname_groups.update(groups)
 
     def _build_final_deduped_list(self, hostname_df, serial_groups, processed_hostname_groups):
         """Build the final deduped list based on serial and hostname groups."""

@@ -226,6 +226,17 @@ def _write_member(member_path, file_obj, max_size, total_extracted_size):
     return total_extracted_size
 
 
+def _member_destination(extract_path_abs, name, enabled_set):
+    basename = os.path.basename(name)
+    if enabled_set and not any(basename.startswith(item + '.') for item in enabled_set):
+        return None
+    destination = os.path.abspath(os.path.join(extract_path_abs, name))
+    if not destination.startswith(os.fspath(extract_path_abs) + os.sep):
+        logger.warning(f'Skipping potentially unsafe file (path traversal): {name}')
+        return None
+    return destination
+
+
 def _safe_extract(tar_path, extract_path, max_files=100, max_size=1024 * 1024 * 1024, enabled_set=None):
     """
     Safely extract a tar archive from 'tar_path' into 'extract_path' with constraints:
@@ -255,15 +266,8 @@ def _safe_extract(tar_path, extract_path, max_files=100, max_size=1024 * 1024 * 
             if not member.name.endswith(('.json', '.csv')):
                 continue
 
-            # Only files from enabled_set (+ extension)
-            basename = os.path.basename(member.name)
-            if enabled_set and not any(basename.startswith(item + '.') for item in enabled_set):
-                continue
-
-            # Build a fully qualified path for this member and ensure it stays within extract_path
-            member_path = os.path.abspath(os.path.join(extract_path, member.name))
-            if not member_path.startswith(extract_path_abs + os.sep):
-                logger.warning(f'Skipping potentially unsafe file (path traversal): {member.name}')
+            member_path = _member_destination(extract_path_abs, member.name, enabled_set)
+            if member_path is None:
                 continue
 
             # Limit total files
@@ -283,7 +287,7 @@ def _safe_extract(tar_path, extract_path, max_files=100, max_size=1024 * 1024 * 
             # Write out the file, limiting max size
             total_extracted_size = _write_member(member_path, file_obj, max_size, total_extracted_size)
 
-            extracted_files.append(basename)
+            extracted_files.append(os.path.basename(member.name))
 
     file_count = len(extracted_files)
     file_list = '", "'.join(sorted(extracted_files))

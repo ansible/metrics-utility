@@ -8,7 +8,7 @@ import pandas as pd
 
 from dateutil.relativedelta import relativedelta
 
-from metrics_utility.automation_controller_billing.helpers import _SCALAR_TYPES, make_hashable
+from metrics_utility.automation_controller_billing.helpers import merge_fact_value
 
 
 def granularity_cast(date, granularity):
@@ -147,21 +147,11 @@ def combine_json_values(val1, val2):
         return merged
 
     for d in (val1, val2):
-        if isinstance(d, dict) and d:
-            for key, value in d.items():
-                if value is not None and value != '':
-                    if isinstance(value, set):
-                        # Set members are already hashable; copy on insert to avoid mutating caller sets.
-                        if key in merged:
-                            merged[key].update(value)
-                        else:
-                            merged[key] = set(value)
-                    else:
-                        item = value if type(value) in _SCALAR_TYPES else make_hashable(value)
-                        if key in merged:
-                            merged[key].add(item)
-                        else:
-                            merged[key] = {item}
+        if not isinstance(d, dict) or not d:
+            continue
+        for key, value in d.items():
+            if value is not None and value != '':
+                merge_fact_value(merged, key, value)
 
     return merged
 
@@ -355,4 +345,4 @@ class Base:
 
     @staticmethod
     def operations():
-        pass
+        return {}

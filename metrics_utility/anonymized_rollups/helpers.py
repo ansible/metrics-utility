@@ -63,26 +63,17 @@ def sanitize_json(obj):
     if isinstance(obj, dict):
         # Recursively sanitize dictionary values
         return {key: sanitize_json(value) for key, value in obj.items()}
-    elif isinstance(obj, list):
-        # Recursively sanitize list items
-        return [sanitize_json(item) for item in obj]
-    elif isinstance(obj, tuple):
-        # Recursively sanitize tuple items (convert to list for JSON)
+    elif isinstance(obj, (list, tuple)):
         return [sanitize_json(item) for item in obj]
     elif HAS_NUMPY and isinstance(obj, (np.integer, np.floating)):
         # Convert NumPy integer and float types to native Python types
         # Check for NaN or infinity first
-        if isinstance(obj, np.floating) and (math.isnan(obj) or math.isinf(obj)):
+        if isinstance(obj, np.floating) and not math.isfinite(obj):
             return None
         return obj.item()  # Convert NumPy scalar to native Python type
     elif HAS_NUMPY and isinstance(obj, np.ndarray):
         # Convert NumPy arrays to lists
         return sanitize_json(obj.tolist())
-    elif isinstance(obj, float):
-        # Check for NaN or infinity
-        if math.isnan(obj) or math.isinf(obj):
-            return None
-        return obj
-    else:
-        # Return other types as-is (int, str, bool, None, etc.)
-        return obj
+    elif isinstance(obj, float) and not math.isfinite(obj):
+        return None
+    return obj
