@@ -4,7 +4,34 @@ import pytest
 
 from django.db import connection
 
-from metrics_utility.library.lock import lock
+from metrics_utility.library.lock import get_lock_id, lock
+
+
+class TestGetLockId:
+    @staticmethod
+    def _cursor(value):
+        cursor = MagicMock()
+        cursor.fetchone.return_value = [value]
+        return cursor
+
+    def test_uses_parameterized_hashtext_query(self):
+        cursor = self._cursor(123)
+        assert get_lock_id(cursor, 'my_string_key') == 123
+        cursor.execute.assert_called_once_with('SELECT hashtext(%s)::bigint', ('my_string_key',))
+
+    def test_normalizes_positive_hash_outside_signed_range(self):
+        cursor = self._cursor(2**63 + 5)
+        assert get_lock_id(cursor, 'key') == 5
+
+    def test_normalizes_negative_hash(self):
+        cursor = self._cursor(-(2**62))
+        assert get_lock_id(cursor, 'key') == (2**63) - (2**62)
+
+    def test_rejects_non_string_key(self):
+        cursor = MagicMock()
+        with pytest.raises(ValueError, match='Cannot use 42 as a lock id'):
+            get_lock_id(cursor, 42)
+        cursor.execute.assert_not_called()
 
 
 class TestCollectorLocks:
