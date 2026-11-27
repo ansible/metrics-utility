@@ -99,17 +99,19 @@ class HashableDict(dict):
         return self._compare(other, operator.lt)
 
     def __le__(self, other):
-        return self._compare(other, operator.le)
+        return self._compare(other, operator.lt, inclusive=True)
 
     def __gt__(self, other):
         return self._compare(other, operator.gt)
 
     def __ge__(self, other):
-        return self._compare(other, operator.ge)
+        return self._compare(other, operator.gt, inclusive=True)
 
-    def _compare(self, other, op):
+    def _compare(self, other, op, *, inclusive=False):
         if not isinstance(other, dict):
             return NotImplemented
+        if inclusive and self == other:
+            return True
         try:
             return op(sorted(self.items()), sorted(other.items()))
         except TypeError:

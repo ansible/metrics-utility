@@ -273,6 +273,15 @@ class TestMakeHashable:
         assert left in ordered
         assert right in ordered
 
+    def test_inclusive_comparisons_preserve_dict_equality_on_json_tie(self):
+        original = {'ports': [22]}
+        normalized = make_hashable(original)
+        # JSON renders both a list and its hashable tuple as the same array.
+        assert normalized != original
+        for left, right in ((normalized, original), (original, normalized)):
+            assert (left <= right) == (left < right or left == right)
+            assert (left >= right) == (left > right or left == right)
+
     def test_hashable_dict_lt_non_dict_returns_not_implemented(self):
         assert HashableDict({'a': 1}).__lt__(5) is NotImplemented
 
