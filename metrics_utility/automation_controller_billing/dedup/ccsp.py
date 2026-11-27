@@ -187,12 +187,12 @@ class DedupCCSP:
             host = row['host_name']
             serials = row['serials']
 
-            if isinstance(serials, Iterable):
-                for serial in serials:
-                    if isinstance(serial, str) and serial:
-                        serial_to_hosts[serial].add(host)
-                        if serial not in serial_to_first:
-                            serial_to_first[serial] = host
+            if not isinstance(serials, Iterable):
+                continue
+            for serial in serials:
+                if isinstance(serial, str) and serial:
+                    serial_to_hosts[serial].add(host)
+                    serial_to_first.setdefault(serial, host)
 
         host_to_canonical = {}
         for serial, hosts in serial_to_hosts.items():

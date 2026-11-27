@@ -1,6 +1,7 @@
 """Helper utilities for the automation_controller_billing package."""
 
 import json
+import operator
 
 from itertools import chain
 
@@ -91,14 +92,26 @@ class HashableDict(dict):
         return hash(frozenset(self.items()))
 
     def __lt__(self, other):
+        return self._compare(other, operator.lt)
+
+    def __le__(self, other):
+        return self._compare(other, operator.le)
+
+    def __gt__(self, other):
+        return self._compare(other, operator.gt)
+
+    def __ge__(self, other):
+        return self._compare(other, operator.ge)
+
+    def _compare(self, other, op):
         if not isinstance(other, dict):
             return NotImplemented
         try:
-            return sorted(self.items()) < sorted(other.items())
+            return op(sorted(self.items()), sorted(other.items()))
         except TypeError:
             # Mixed/nested values under the same key can be incomparable; keep ordering
             # deterministic for report sorting (AAP-101848 / CodeRabbit follow-up).
-            return json.dumps(self, sort_keys=True) < json.dumps(other, sort_keys=True)
+            return op(json.dumps(self, sort_keys=True), json.dumps(other, sort_keys=True))
 
 
 def make_hashable(obj):
@@ -140,16 +153,17 @@ def merge_json_sets(json_values):
     merged = {}
     for val in json_values:
         d = parse_json(val)
-        if isinstance(d, dict):
-            for key, value in d.items():
-                # Ignore null (None) or empty string values.
-                # We also want to ignore NA value used when facts are not available.
-                # Use != (not set membership): nested dict values are unhashable (AAP-101848).
-                if value is not None and value != '' and value != 'NA':
-                    if isinstance(value, set):
-                        merged.setdefault(key, set()).update(make_hashable(v) for v in value)
-                    else:
-                        merged.setdefault(key, set()).add(make_hashable(value))
+        if not isinstance(d, dict):
+            continue
+        for key, value in d.items():
+            # Ignore null (None) or empty string values.
+            # We also want to ignore NA value used when facts are not available.
+            # Use != (not set membership): nested dict values are unhashable (AAP-101848).
+            if value is not None and value != '' and value != 'NA':
+                if isinstance(value, set):
+                    merged.setdefault(key, set()).update(make_hashable(v) for v in value)
+                else:
+                    merged.setdefault(key, set()).add(make_hashable(value))
     return merged
 
 

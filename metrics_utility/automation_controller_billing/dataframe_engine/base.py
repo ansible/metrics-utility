@@ -141,13 +141,14 @@ def combine_json_values(val1, val2):
     """
     merged = {}
     for d in [val1, val2]:
-        if isinstance(d, dict):
-            for key, value in d.items():
-                if value is not None and value != '':
-                    if isinstance(value, set):
-                        merged.setdefault(key, set()).update(make_hashable(v) for v in value)
-                    else:
-                        merged.setdefault(key, set()).add(make_hashable(value))
+        if not isinstance(d, dict):
+            continue
+        for key, value in d.items():
+            if value is not None and value != '':
+                if isinstance(value, set):
+                    merged.setdefault(key, set()).update(make_hashable(v) for v in value)
+                else:
+                    merged.setdefault(key, set()).add(make_hashable(value))
 
     return merged
 
@@ -341,4 +342,4 @@ class Base:
 
     @staticmethod
     def operations():
-        pass
+        return {}

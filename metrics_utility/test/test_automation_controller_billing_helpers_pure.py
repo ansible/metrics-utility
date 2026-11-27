@@ -200,6 +200,11 @@ class TestMakeHashable:
         left = HashableDict({'a': 1})
         right = HashableDict({'a': 2})
         assert left < right
+        assert left <= right
+        assert right > left
+        assert right >= left
+        assert left <= dict(left)
+        assert left >= dict(left)
         assert sorted([right, left]) == [left, right]
 
     def test_hashable_dict_lt_handles_incomparable_nested_values(self):

@@ -152,14 +152,14 @@ class Collector:
         # set it to `now`, but only if that isn't more than 28 days ahead of a passed-in
         # `since` parameter.
         if since is not None:
-            if until is not None:
-                if until > since + timedelta(days=get_max_gather_period_days()):
-                    until = since + timedelta(days=get_max_gather_period_days())
-                    logger.warning(
-                        f'End of the collection interval is greater than {get_max_gather_period_days()} days from start, setting end to {until}.'
-                    )
-            else:  # until is None
-                until = min(since + timedelta(days=get_max_gather_period_days()), _now)
+            latest_end = since + timedelta(days=get_max_gather_period_days())
+            if until is None:
+                until = min(latest_end, _now)
+            elif until > latest_end:
+                until = latest_end
+                logger.warning(
+                    f'End of the collection interval is greater than {get_max_gather_period_days()} days from start, setting end to {until}.'
+                )
         elif until is None:
             until = _now
 
@@ -179,14 +179,9 @@ class Collector:
                 f'Start of the collection interval is more than {get_max_gather_period_days()} days prior to {until}, setting to {horizon}.'
             )
 
-        last_gather = horizon
-        if last_gather < horizon:
-            last_gather = horizon
-            logger.warning(f'Last analytics run was more than {get_max_gather_period_days()} days prior to {until}, using {horizon} instead.')
-
         self.gather_since = since
         self.gather_until = until
-        self.last_gather = last_gather
+        self.last_gather = horizon
 
         logger.warning(f'Final since-until: {since} to {until}')
 
@@ -260,15 +255,7 @@ class Collector:
 
         for collection in self.collections[Collection.COLLECTION_TYPE_CSV]:
             if last_key != collection.key:
-                write_enabled = False
-
-                if collection.key == 'job_host_summary' and not disable_job_host_summary:
-                    write_enabled = True
-
-                if collection.key in optional_collectors:
-                    write_enabled = True
-
-                if write_enabled:
+                if collection.key in optional_collectors or (collection.key == 'job_host_summary' and not disable_job_host_summary):
                     logger.warning(f'Progress info: Now gathering {collection.key}')
                 else:
                     logger.warning(f'Progress info: Skipping {collection.key} because it is not enabled.')
@@ -282,11 +269,8 @@ class Collector:
 
             # If collection has sub_collections (it means it collected more files)
             # ship them in their own package
-            if len(collection.sub_collections):
-                for sub_collection in collection.sub_collections:
-                    self._add_collection_to_package(sub_collection)
-            else:
-                self._add_collection_to_package(collection)
+            for part in collection.sub_collections or [collection]:
+                self._add_collection_to_package(part)
 
     def _add_collection_to_package(self, collection):
         """Adds collection to package and ships it if collection has slicing"""

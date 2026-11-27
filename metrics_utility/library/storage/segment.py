@@ -221,45 +221,41 @@ class StorageSegment:
             raise Exception(msg)
 
         for key, value in data.items():
-            if isinstance(value, dict):
-                chunk = {key: value}
-                chunk_size = self._calculate_size(chunk)
-                if chunk_size > max_size:
-                    logger.warning('Oversized dict chunk for key %r: %d bytes exceeds %d limit', key, chunk_size, max_size)
-                chunks.append(chunk)
-
-            elif isinstance(value, list):
-                # Compact JSON has no spaces, so each additional item adds item_size + 1 comma byte.
-                base_size = self._calculate_size({key: []})
-                active_items = []
-                active_size = base_size
-
-                for item in value:
-                    item_size = self._calculate_size(item)
-                    added_size = item_size + (1 if active_items else 0)
-                    if active_size + added_size > max_size:
-                        if active_items:
-                            chunks.append({key: active_items})
-                            active_items = [item]
-                            active_size = base_size + item_size
-                        else:
-                            logger.warning('Single list item in key %r exceeds %d byte limit', key, max_size)
-                            chunks.append({key: [item]})
-                    else:
-                        active_items.append(item)
-                        active_size += added_size
-
-                if active_items:
-                    chunks.append({key: active_items})
-
-            else:
-                chunk = {key: value}
-                chunk_size = self._calculate_size(chunk)
-                if chunk_size > max_size:
-                    logger.warning('Oversized value chunk for key %r: %d bytes exceeds %d limit', key, chunk_size, max_size)
-                chunks.append(chunk)
+            if isinstance(value, list):
+                chunks.extend(self._list_chunks(key, value, max_size))
+                continue
+            chunk = {key: value}
+            chunk_size = self._calculate_size(chunk)
+            if chunk_size > max_size:
+                kind = 'dict' if isinstance(value, dict) else 'value'
+                logger.warning('Oversized %s chunk for key %r: %d bytes exceeds %d limit', kind, key, chunk_size, max_size)
+            chunks.append(chunk)
 
         return chunks or [data]
+
+    def _list_chunks(self, key, value, max_size):
+        # Compact JSON has no spaces, so each additional item adds item_size + 1 comma byte.
+        base_size = self._calculate_size({key: []})
+        active_items = []
+        active_size = base_size
+
+        for item in value:
+            item_size = self._calculate_size(item)
+            added_size = item_size + (1 if active_items else 0)
+            if active_size + added_size > max_size:
+                if active_items:
+                    yield {key: active_items}
+                    active_items = [item]
+                    active_size = base_size + item_size
+                else:
+                    logger.warning('Single list item in key %r exceeds %d byte limit', key, max_size)
+                    yield {key: [item]}
+            else:
+                active_items.append(item)
+                active_size += added_size
+
+        if active_items:
+            yield {key: active_items}
 
     def _calculate_event_overhead(self, artifact_name, event_name, anonymous_id, segment_meta):
         """Measure the JSON byte overhead of one Segment track event envelope."""

@@ -311,21 +311,22 @@ class DedupRenewalExperimental(BaseDedupRenewal):
     def _group_by_individual_serial(self, expanded_df, serial_groups, processed_hostname_groups):
         """Helper to group by individual serials."""
         for _, row in expanded_df.iterrows():
-            if row['hostname_group'] not in processed_hostname_groups:
-                for serial in row['individual_serials']:
-                    if serial:
-                        serial_matches = expanded_df[expanded_df['individual_serials'].apply(lambda x, s=serial: s in x if x else False)]
-                        hostname_groups_in_serial = serial_matches['hostname_group'].unique()
-                        if len(hostname_groups_in_serial) > 1:
-                            canonical_group = hostname_groups_in_serial[0]
-                            serial_key = f'individual:{serial}'
-                            if serial_key not in serial_groups:
-                                serial_groups[serial_key] = {
-                                    'canonical_group': canonical_group,
-                                    'groups_to_merge': hostname_groups_in_serial,
-                                    'serial_type': 'individual',
-                                }
-                                processed_hostname_groups.update(hostname_groups_in_serial)
+            if row['hostname_group'] in processed_hostname_groups:
+                continue
+            for serial in row['individual_serials']:
+                if serial:
+                    self._record_individual_serial(expanded_df, serial, serial_groups, processed_hostname_groups)
+
+    @staticmethod
+    def _record_individual_serial(expanded_df, serial, serial_groups, processed_hostname_groups):
+        serial_key = f'individual:{serial}'
+        if serial_key in serial_groups:
+            return
+        matches = expanded_df['individual_serials'].apply(lambda values: bool(values) and serial in values)
+        groups = expanded_df.loc[matches, 'hostname_group'].unique()
+        if len(groups) > 1:
+            serial_groups[serial_key] = {'canonical_group': groups[0], 'groups_to_merge': groups, 'serial_type': 'individual'}
+            processed_hostname_groups.update(groups)
 
     def _build_final_deduped_list(self, hostname_df, serial_groups, processed_hostname_groups):
         """Build the final deduped list based on serial and hostname groups."""
