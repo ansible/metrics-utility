@@ -15,9 +15,12 @@ def serial_from_facts(canonical_facts):
 
     Returns:
         Compound serial string (``"serial/machine_id"``) or None if either
-        field is null.
+        field is null, or if the value does not decode to a JSON object
+        (e.g. ``'[]'``, ``'123'``, ``'null'``).
     """
     facts = parse_json(canonical_facts)
+    if not isinstance(facts, dict):
+        return None
     if pd.isnull(facts.get('ansible_product_serial')) or pd.isnull(facts.get('ansible_machine_id')):
         return None
     return facts.get('ansible_product_serial', '') + '/' + facts.get('ansible_machine_id', '')
@@ -74,8 +77,9 @@ class DataframeInventoryScope(Base):
 
                 billing_data['last_automation'] = pd.to_datetime(billing_data['last_automation'], format='ISO8601').dt.tz_localize(None)
 
-                # Batches are non-empty here (skipped above) and canonical_facts
-                # is a single column, so the column can be read directly.
+                # Keep canonical_facts as the raw JSON strings; group() decodes
+                # them via merge_json_sets(), which accepts strings or dicts, so
+                # only the serial key needs a per-row parse here.
                 billing_data['serial'] = billing_data['canonical_facts'].map(serial_from_facts)
 
                 experimental_dedup = self.extra_params.get('deduplicator') == 'ccsp-experimental'
