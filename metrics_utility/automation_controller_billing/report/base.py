@@ -292,7 +292,7 @@ class Base:
 
         return destination_dataframe
 
-    def _build_data_section_scope(self, current_row, ws, dataframe, mode=None):
+    def _build_data_section_scope(self, current_row, ws, dataframe):
         """Write the inventory-scope section into *ws* starting at *current_row*.
 
         Copies only the columns needed for the sheet, leaving *dataframe*
@@ -386,7 +386,7 @@ class Base:
         def extract_infra_info(facts):
             def extract_value(value):
                 if isinstance(value, set):
-                    return list(value)[0] if value else 'Unknown'
+                    return next(iter(value), 'Unknown')
                 elif isinstance(value, list):
                     return value[0] if value else 'Unknown'
                 elif isinstance(value, str):
@@ -483,17 +483,27 @@ class Base:
         header_font = Font(name=self.FONT, size=10, color=self.BLACK_COLOR_HEX, bold=True)
         value_font = Font(name=self.FONT, size=10, color=self.BLACK_COLOR_HEX)
 
+        # Only aggregate columns rendered for this mode/node type.
+        include_orgs = mode != 'by_organization'
+        include_indirect = managed_node_type == 'indirect'
+        # Add facts and canonical facts for managed nodes (direct) when experimental dedup is enabled
+        # or always for indirect nodes
+        include_facts = include_indirect or (managed_node_type == 'direct' and self.has_dedup_enabled())
+
         agg_dict = {
-            'organizations': ('organization_name', 'nunique'),
             'host_runs': ('host_name', 'count'),
             'task_runs': ('task_runs', 'sum'),
             'first_automation': ('first_automation', 'min'),
             'last_automation': ('last_automation', 'max'),
-            'managed_node_types_set': ('managed_node_types_set', lambda x: merge_arrays(x)),
-            'events': ('events', lambda x: merge_arrays(x)),
-            'canonical_facts': ('canonical_facts', lambda x: merge_json_sets(x)),
-            'facts': ('facts', lambda x: merge_json_sets(x)),
         }
+        if include_orgs:
+            agg_dict['organizations'] = ('organization_name', 'nunique')
+        if include_indirect:
+            agg_dict['managed_node_types_set'] = ('managed_node_types_set', merge_arrays)
+            agg_dict['events'] = ('events', merge_arrays)
+        if include_facts:
+            agg_dict['canonical_facts'] = ('canonical_facts', merge_json_sets)
+            agg_dict['facts'] = ('facts', merge_json_sets)
 
         # Handle deduplication aggregation if enabled
         self.handle_dedup_aggregation(agg_dict)
@@ -501,25 +511,28 @@ class Base:
         # Now pass this dictionary into .agg()
         ccsp_report_dataframe = dataframe.groupby('host_name', dropna=False).agg(**agg_dict)
 
-        # Convert arrays and dict fields into string, so they can be rendered into xlsx
-        convert_cols = ['managed_node_types_set', 'events', 'canonical_facts', 'facts']
+        # Convert rendered complex fields into JSON strings for xlsx
+        convert_cols = []
+        if include_facts:
+            convert_cols += ['canonical_facts', 'facts']
+        if include_indirect:
+            convert_cols += ['managed_node_types_set', 'events']
 
         ccsp_report_dataframe = ccsp_report_dataframe.reset_index()
-        columns = [
-            'host_name',
-            'organizations',
+        columns = ['host_name']
+        if include_orgs:
+            columns.append('organizations')
+        columns += [
             'host_runs',
             'task_runs',
             'first_automation',
             'last_automation',
         ]
 
-        # Add facts and canonical facts for managed nodes (direct) when experimental dedup is enabled
-        # or always for indirect nodes
-        if managed_node_type == 'indirect' or (managed_node_type == 'direct' and self.has_dedup_enabled()):
+        if include_facts:
             columns += ['canonical_facts', 'facts']
 
-        if managed_node_type == 'indirect':
+        if include_indirect:
             columns += ['managed_node_types_set', 'events']
 
         # Handle deduplication columns if enabled
@@ -529,9 +542,6 @@ class Base:
             if col in ccsp_report_dataframe.columns:
                 ccsp_report_dataframe[col] = ccsp_report_dataframe[col].apply(self.convert_cell)
 
-        if mode == 'by_organization':
-            # Filter some columns out based on mode
-            columns = [col for col in columns if col != 'organizations']
         ccsp_report_dataframe = ccsp_report_dataframe.reindex(columns=columns)
 
         labels = {

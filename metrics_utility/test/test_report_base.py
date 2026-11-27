@@ -802,6 +802,254 @@ class TestBuildDataSectionUsageByNode:
 
 
 # ---------------------------------------------------------------------------
+# _build_data_section_usage_by_node – exact headers/values for every combination
+# ---------------------------------------------------------------------------
+
+_USAGE_NODE_BASE_HEADERS = [
+    'Host name',
+    'Automated by\norganizations',
+    'Job runs',
+    'Number of task\nruns',
+    'First\nautomation',
+    'Last\nautomation',
+]
+_USAGE_NODE_FACTS_HEADERS = ['Canonical\nFacts', 'Facts']
+_USAGE_NODE_INDIRECT_HEADERS = ['Manage\nNode\nTypes', 'Events']
+_USAGE_NODE_DEDUP_HEADERS = [
+    'Host names\nbefore\ndeduplication',
+    'Host names\nbefore\ndeduplication\ncount',
+]
+
+
+def _usage_by_node_values_df(dedup=False):
+    """Dataframe with two hosts, distinct orgs/facts/events and (optionally) dedup sets."""
+    data = {
+        'host_name': ['host1', 'host1', 'host2'],
+        'organization_name': ['org1', 'org2', 'org2'],
+        'task_runs': [5, 3, 7],
+        'first_automation': ['2024-01-01', '2024-01-02', '2024-01-03'],
+        'last_automation': ['2024-01-02', '2024-01-03', '2024-01-04'],
+        'managed_node_types_set': [['direct'], ['indirect'], ['indirect']],
+        'events': [['ev2'], ['ev1', 'ev2'], None],
+        'canonical_facts': [{'a': '1'}, {'a': '2'}, {}],
+        'facts': [{'f': 'x'}, {'f': 'y'}, {}],
+    }
+    if dedup:
+        data['host_names_before_dedup'] = [{'h2', 'h1'}, {'h1'}, {'h9'}]
+    return pd.DataFrame(data)
+
+
+def _usage_node_headers(include_orgs, include_facts, include_indirect, dedup):
+    headers = ['Host name']
+    if include_orgs:
+        headers.append(_USAGE_NODE_BASE_HEADERS[1])
+    headers += _USAGE_NODE_BASE_HEADERS[2:]
+    if include_facts:
+        headers += _USAGE_NODE_FACTS_HEADERS
+    if include_indirect:
+        headers += _USAGE_NODE_INDIRECT_HEADERS
+    if dedup:
+        headers += _USAGE_NODE_DEDUP_HEADERS
+    return headers
+
+
+def _header_values(ws, max_cols=20):
+    """Read the (contiguous) non-empty header values from row 1."""
+    values = []
+    for c in range(1, max_cols + 1):
+        value = ws.cell(row=1, column=c).value
+        if value is None:
+            break
+        values.append(value)
+    return values
+
+
+class TestBuildDataSectionUsageByNodeColumns:
+    """Output must stay identical while discarded columns are no longer aggregated."""
+
+    def test_direct_without_dedup(self):
+        r = _report(dedup=False)
+        ws = _make_ws(r)
+        end_row = r._build_data_section_usage_by_node(1, ws, _usage_by_node_values_df(), managed_node_type='direct')
+        assert _header_values(ws) == _usage_node_headers(True, False, False, False)
+        assert _sheet_rows(ws, 6) == [
+            tuple(_usage_node_headers(True, False, False, False)),
+            ('host1', 2, 2, 8, '2024-01-01', '2024-01-03'),
+            ('host2', 1, 1, 7, '2024-01-03', '2024-01-04'),
+        ]
+        assert end_row == 4
+
+    def test_direct_with_dedup(self):
+        r = _report(dedup=True)
+        ws = _make_ws(r)
+        r._build_data_section_usage_by_node(1, ws, _usage_by_node_values_df(dedup=True), managed_node_type='direct')
+        headers = _usage_node_headers(True, True, False, True)
+        assert _header_values(ws) == headers
+        assert _sheet_rows(ws, len(headers)) == [
+            tuple(headers),
+            ('host1', 2, 2, 8, '2024-01-01', '2024-01-03', '{"a": ["1", "2"]}', '{"f": ["x", "y"]}', '["h1", "h2"]', 2),
+            ('host2', 1, 1, 7, '2024-01-03', '2024-01-04', '{}', '{}', '["h9"]', 1),
+        ]
+
+    def test_indirect_without_dedup(self):
+        r = _report(dedup=False)
+        ws = _make_ws(r)
+        r._build_data_section_usage_by_node(1, ws, _usage_by_node_values_df(), managed_node_type='indirect')
+        headers = _usage_node_headers(True, True, True, False)
+        assert _header_values(ws) == headers
+        assert _sheet_rows(ws, len(headers)) == [
+            tuple(headers),
+            (
+                'host1',
+                2,
+                2,
+                8,
+                '2024-01-01',
+                '2024-01-03',
+                '{"a": ["1", "2"]}',
+                '{"f": ["x", "y"]}',
+                '["direct", "indirect"]',
+                '["ev1", "ev2"]',
+            ),
+            ('host2', 1, 1, 7, '2024-01-03', '2024-01-04', '{}', '{}', '["indirect"]', '[]'),
+        ]
+
+    def test_indirect_with_dedup(self):
+        r = _report(dedup=True)
+        ws = _make_ws(r)
+        r._build_data_section_usage_by_node(1, ws, _usage_by_node_values_df(dedup=True), managed_node_type='indirect')
+        headers = _usage_node_headers(True, True, True, True)
+        assert _header_values(ws) == headers
+        rows = _sheet_rows(ws, len(headers))
+        assert rows[0] == tuple(headers)
+        assert rows[1][0] == 'host1'
+        assert rows[1][-2:] == ('["h1", "h2"]', 2)
+        assert rows[2][0] == 'host2'
+        assert rows[2][-2:] == ('["h9"]', 1)
+
+    def test_by_organization_without_dedup(self):
+        r = _report(dedup=False)
+        ws = _make_ws(r)
+        r._build_data_section_usage_by_node(1, ws, _usage_by_node_values_df(), mode='by_organization')
+        headers = _usage_node_headers(False, False, False, False)
+        assert _header_values(ws) == headers
+        assert _sheet_rows(ws, len(headers)) == [
+            tuple(headers),
+            ('host1', 2, 8, '2024-01-01', '2024-01-03'),
+            ('host2', 1, 7, '2024-01-03', '2024-01-04'),
+        ]
+
+    def test_by_organization_with_dedup(self):
+        r = _report(dedup=True)
+        ws = _make_ws(r)
+        r._build_data_section_usage_by_node(1, ws, _usage_by_node_values_df(dedup=True), mode='by_organization')
+        headers = _usage_node_headers(False, False, False, True)
+        assert _header_values(ws) == headers
+        assert _sheet_rows(ws, len(headers)) == [
+            tuple(headers),
+            ('host1', 2, 8, '2024-01-01', '2024-01-03', '["h1", "h2"]', 2),
+            ('host2', 1, 7, '2024-01-03', '2024-01-04', '["h9"]', 1),
+        ]
+
+    def test_empty_dataframe_writes_header_row_only(self):
+        for mode, mnt in [
+            (None, 'direct'),
+            (None, 'indirect'),
+            ('by_organization', None),
+        ]:
+            for dedup in (False, True):
+                r = _report(dedup=dedup)
+                ws = _make_ws(r, title=f'Empty{mode}{mnt}{dedup}')
+                df = _usage_by_node_values_df(dedup=dedup).iloc[0:0]
+                end_row = r._build_data_section_usage_by_node(1, ws, df, mode=mode, managed_node_type=mnt)
+                include_indirect = mnt == 'indirect'
+                headers = _usage_node_headers(
+                    include_orgs=mode != 'by_organization',
+                    include_facts=include_indirect or (mnt == 'direct' and dedup),
+                    include_indirect=include_indirect,
+                    dedup=dedup,
+                )
+                assert end_row == 2
+                assert _header_values(ws) == headers
+                assert _sheet_rows(ws, len(headers)) == [tuple(headers)]
+
+
+class TestBuildDataSectionUsageByNodeSkipsDiscardedAggregations:
+    """merge_arrays/merge_json_sets must only run for columns that are rendered."""
+
+    def _spy(self, monkeypatch, name):
+        from metrics_utility.automation_controller_billing.report import base as base_module
+
+        calls = []
+        real = getattr(base_module, name)
+
+        def wrapper(values):
+            calls.append(values)
+            return real(values)
+
+        monkeypatch.setattr(base_module, name, wrapper)
+        return calls
+
+    def test_by_organization_skips_both_merges(self, monkeypatch):
+        arrays = self._spy(monkeypatch, 'merge_arrays')
+        jsons = self._spy(monkeypatch, 'merge_json_sets')
+        r = _report()
+        ws = _make_ws(r)
+        r._build_data_section_usage_by_node(1, ws, _usage_by_node_values_df(), mode='by_organization')
+        assert arrays == []
+        assert jsons == []
+
+    def test_by_organization_with_dedup_skips_both_merges(self, monkeypatch):
+        arrays = self._spy(monkeypatch, 'merge_arrays')
+        jsons = self._spy(monkeypatch, 'merge_json_sets')
+        r = _report(dedup=True)
+        ws = _make_ws(r)
+        r._build_data_section_usage_by_node(1, ws, _usage_by_node_values_df(dedup=True), mode='by_organization')
+        assert arrays == []
+        assert jsons == []
+
+    def test_direct_without_dedup_skips_both_merges(self, monkeypatch):
+        arrays = self._spy(monkeypatch, 'merge_arrays')
+        jsons = self._spy(monkeypatch, 'merge_json_sets')
+        r = _report()
+        ws = _make_ws(r)
+        r._build_data_section_usage_by_node(1, ws, _usage_by_node_values_df(), managed_node_type='direct')
+        assert arrays == []
+        assert jsons == []
+
+    def test_direct_with_dedup_calls_json_sets_only(self, monkeypatch):
+        arrays = self._spy(monkeypatch, 'merge_arrays')
+        jsons = self._spy(monkeypatch, 'merge_json_sets')
+        r = _report(dedup=True)
+        ws = _make_ws(r)
+        r._build_data_section_usage_by_node(1, ws, _usage_by_node_values_df(dedup=True), managed_node_type='direct')
+        assert arrays == []
+        # canonical_facts + facts, once per host group
+        assert len(jsons) == 4
+
+    def test_indirect_calls_both_merges(self, monkeypatch):
+        arrays = self._spy(monkeypatch, 'merge_arrays')
+        jsons = self._spy(monkeypatch, 'merge_json_sets')
+        r = _report()
+        ws = _make_ws(r)
+        r._build_data_section_usage_by_node(1, ws, _usage_by_node_values_df(), managed_node_type='indirect')
+        # managed_node_types_set + events, once per host group
+        assert len(arrays) == 4
+        # canonical_facts + facts, once per host group
+        assert len(jsons) == 4
+
+    def test_empty_dataframe_never_merges(self, monkeypatch):
+        arrays = self._spy(monkeypatch, 'merge_arrays')
+        jsons = self._spy(monkeypatch, 'merge_json_sets')
+        r = _report()
+        ws = _make_ws(r)
+        df = _usage_by_node_values_df().iloc[0:0]
+        r._build_data_section_usage_by_node(1, ws, df, managed_node_type='indirect')
+        assert arrays == []
+        assert jsons == []
+
+
+# ---------------------------------------------------------------------------
 # _build_data_section_usage_by_collections
 # ---------------------------------------------------------------------------
 

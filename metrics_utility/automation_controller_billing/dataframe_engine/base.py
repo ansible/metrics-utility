@@ -8,7 +8,7 @@ import pandas as pd
 
 from dateutil.relativedelta import relativedelta
 
-from metrics_utility.automation_controller_billing.helpers import make_hashable
+from metrics_utility.automation_controller_billing.helpers import merge_fact_value
 
 
 def granularity_cast(date, granularity):
@@ -87,6 +87,9 @@ def combine_set(set1, set2):
     If an input is a list, it is first converted to a set.
     If an input is not a list or a set, it is treated as empty.
     """
+    if type(set1) is set and type(set2) is set:
+        return set1 | set2
+
     # Convert to set if input is a list; otherwise, if not a set, default to an empty set.
     if isinstance(set1, list):
         set1 = set(set1)
@@ -140,15 +143,15 @@ def combine_json_values(val1, val2):
         Dict mapping each key to a set of its distinct non-empty values from both dicts.
     """
     merged = {}
-    for d in [val1, val2]:
-        if not isinstance(d, dict):
+    if not (isinstance(val1, dict) and val1) and not (isinstance(val2, dict) and val2):
+        return merged
+
+    for d in (val1, val2):
+        if not isinstance(d, dict) or not d:
             continue
         for key, value in d.items():
             if value is not None and value != '':
-                if isinstance(value, set):
-                    merged.setdefault(key, set()).update(make_hashable(v) for v in value)
-                else:
-                    merged.setdefault(key, set()).add(make_hashable(value))
+                merge_fact_value(merged, key, value)
 
     return merged
 
@@ -291,7 +294,7 @@ class Base:
         if rollup is None:
             return new_group
 
-        rollup = pd.merge(rollup, new_group, on=self.unique_index_columns(), how='outer')
+        rollup = pd.merge(rollup, new_group, on=self.unique_index_columns(), how='outer', validate='one_to_one')
         rollup = self.summarize_merged_dataframes(rollup, self.data_columns(), operations=self.operations())
         return self.cast_dataframe(rollup, self.cast_types())
 

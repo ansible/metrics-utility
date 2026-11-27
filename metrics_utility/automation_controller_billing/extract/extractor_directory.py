@@ -17,7 +17,7 @@ class ExtractorDirectory(Base):
 
         Args:
             date: :class:`datetime.date` identifying the day partition to read.
-            collections: List of required collector names (used to filter tarballs).
+            collections: Required collector names to extract from each archive.
             optional: List of additional collector names to include if present.
 
         Yields:
@@ -43,10 +43,11 @@ class ExtractorDirectory(Base):
 
         Args:
             date: :class:`datetime.date` used to construct the partition path.
-            collections: List of collector names to filter by (or None for all).
+            collections: Requested collector names, or None for all.
 
         Returns:
-            List of absolute file paths matching the requested collections.
+            Candidate paths. A filename alone cannot identify every collection
+            in a mixed archive.
         """
         prefix = self.get_path_prefix(date)
 

@@ -13,6 +13,10 @@ from metrics_utility.library.collectors.controller.config import _datetime_hook
 from metrics_utility.logger import logger
 
 
+# Exact scalar types returned unchanged by make_hashable().
+_SCALAR_TYPES = frozenset({str, int, float, bool})
+
+
 def get_last_entries_from_db() -> dict:
     """
     Get AUTOMATION_ANALYTICS_LAST_ENTRIES directly from database.
@@ -134,6 +138,21 @@ def make_hashable(obj):
     return obj
 
 
+def merge_fact_value(merged, key, value):
+    """Add a fact to the result without mutating an input set."""
+    if isinstance(value, set):
+        if key in merged:
+            merged[key].update(value)
+        else:
+            merged[key] = set(value)
+    else:
+        item = value if type(value) in _SCALAR_TYPES else make_hashable(value)
+        if key in merged:
+            merged[key].add(item)
+        else:
+            merged[key] = {item}
+
+
 def merge_json_sets(json_values):
     """Merge a sequence of JSON dict values into a mapping of key → set of non-null values.
 
@@ -152,7 +171,7 @@ def merge_json_sets(json_values):
     """
     merged = {}
     for val in json_values:
-        d = parse_json(val)
+        d = val if type(val) is dict else parse_json(val)
         if not isinstance(d, dict):
             continue
         for key, value in d.items():
@@ -160,10 +179,7 @@ def merge_json_sets(json_values):
             # We also want to ignore NA value used when facts are not available.
             # Use != (not set membership): nested dict values are unhashable (AAP-101848).
             if value is not None and value != '' and value != 'NA':
-                if isinstance(value, set):
-                    merged.setdefault(key, set()).update(make_hashable(v) for v in value)
-                else:
-                    merged.setdefault(key, set()).add(make_hashable(value))
+                merge_fact_value(merged, key, value)
     return merged
 
 

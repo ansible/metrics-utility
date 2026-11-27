@@ -9,6 +9,7 @@ from metrics_utility.automation_controller_billing.dataframe_engine.dataframe_in
     compute_serial,
     serial_from_facts,
 )
+from metrics_utility.automation_controller_billing.helpers import merge_json_sets
 
 
 @pytest.mark.parametrize(
@@ -51,10 +52,11 @@ def test_serial_from_facts_preserves_duplicate_index_and_dtype():
 
 
 @pytest.mark.parametrize('facts', ['null', '[]', '123'])
-def test_serial_from_facts_non_object_json_currently_raises(facts):
-    """Documents current behavior, not a contract: the parse_json gap is out of scope."""
-    with pytest.raises(AttributeError):
-        serial_from_facts(facts)
+def test_serial_from_facts_non_object_json_returns_none(facts):
+    """Non-object JSON carries no serial fields, so it yields no serial."""
+    assert serial_from_facts(facts) is None
+    dataframe = pd.DataFrame({'canonical_facts': [facts]})
+    assert dataframe['canonical_facts'].map(serial_from_facts).iloc[0] is None
 
 
 def test_build_dataframe_combines_serials_across_batches():
@@ -95,3 +97,77 @@ def test_build_dataframe_combines_serials_across_batches():
     assert len(result) == 1
     assert result.iloc[0]['host_name'] == 'host'
     assert result.iloc[0]['serials'] == {'serial-a/machine-a', 'serial-b/machine-b'}
+
+
+def _engine_for_batches(batches):
+    extractor = MagicMock()
+    extractor.iter_batches.return_value = iter(batches)
+    return DataframeInventoryScope(
+        extractor=extractor,
+        month=date(2026, 1, 1),
+        extra_params={'since_date': date(2026, 1, 1), 'until_date': date(2026, 1, 1)},
+    )
+
+
+def _single_batch(facts_values, facts='{}'):
+    return [
+        {
+            'main_host': pd.DataFrame(
+                {
+                    'host_name': ['host'] * len(facts_values),
+                    'organization_name': ['org'] * len(facts_values),
+                    'inventory_name': ['inventory'] * len(facts_values),
+                    'canonical_facts': facts_values,
+                    'facts': [facts] * len(facts_values),
+                    'last_automation': ['2026-01-01T12:00:00+00:00'] * len(facts_values),
+                }
+            ),
+            'main_host_daily': pd.DataFrame(),
+            'config': {'install_uuid': 'install'},
+        }
+    ]
+
+
+@pytest.mark.parametrize(
+    'raw',
+    [
+        '{"ansible_product_serial":"s1","ansible_machine_id":"m1"}',
+        {'ansible_product_serial': 's2', 'ansible_machine_id': 'm2'},
+        '{"ansible_product_serial":"s3","ansible_machine_id":"m3","nested":{"k":[1,2]}}',
+        '{}',
+        'not json',
+        None,
+        float('nan'),
+    ],
+    ids=['json-string', 'dict', 'nested-json', 'empty-json', 'malformed', 'none', 'nan'],
+)
+def test_build_dataframe_matches_direct_helper_results(raw):
+    """Pre-parsing must not change serial/facts results vs. the per-row helpers."""
+    expected_serial = serial_from_facts(raw)
+    expected_facts = merge_json_sets([raw])
+
+    result = _engine_for_batches(_single_batch([raw])).build_dataframe()
+
+    assert result.iloc[0]['serials'] == {expected_serial}
+    assert result.iloc[0]['canonical_facts'] == expected_facts
+
+
+@pytest.mark.parametrize('raw', ['null', '[]', '123'])
+def test_build_dataframe_non_object_json_yields_no_serial(raw):
+    """Non-object JSON degrades gracefully instead of raising."""
+    result = _engine_for_batches(_single_batch([raw])).build_dataframe()
+
+    assert result.iloc[0]['serials'] == {None}
+    assert result.iloc[0]['canonical_facts'] == {}
+
+
+def test_build_dataframe_nested_facts_are_merged_across_batches():
+    batch1 = _single_batch(['{"tags":{"a":[1,2]},"ansible_product_serial":"s","ansible_machine_id":"m"}'])
+    batch2 = _single_batch(['{"tags":{"a":[1,2]},"ansible_product_serial":"s","ansible_machine_id":"m"}'])
+
+    result = _engine_for_batches(batch1 + batch2).build_dataframe()
+
+    assert result.iloc[0]['serials'] == {'s/m'}
+    canonical_facts = result.iloc[0]['canonical_facts']
+    assert set(canonical_facts) == {'ansible_product_serial', 'ansible_machine_id', 'tags'}
+    assert canonical_facts['tags'] == set(merge_json_sets([{'t': {'a': [1, 2]}}])['t'])

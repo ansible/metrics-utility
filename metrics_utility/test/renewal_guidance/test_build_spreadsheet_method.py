@@ -41,7 +41,7 @@ def setup_build_spreadsheet_mocks(fixed_now):
         'dataframe_to_rows_func': MagicMock(return_value=[['mock_header'], ['mock_data']]),
     }
 
-    yield {
+    return {
         'openpyxl_wb_mock': mock_wb,
         'time_module_mock': mock_time_module,
         'mocks_for_instance': mocks_for_instance,

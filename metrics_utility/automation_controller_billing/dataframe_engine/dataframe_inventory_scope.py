@@ -15,9 +15,12 @@ def serial_from_facts(canonical_facts):
 
     Returns:
         Compound serial string (``"serial/machine_id"``) or None if either
-        field is null.
+        field is null, or if the value does not decode to a JSON object
+        (e.g. ``'[]'``, ``'123'``, ``'null'``).
     """
     facts = parse_json(canonical_facts)
+    if not isinstance(facts, dict):
+        return None
     if pd.isnull(facts.get('ansible_product_serial')) or pd.isnull(facts.get('ansible_machine_id')):
         return None
     return facts.get('ansible_product_serial', '') + '/' + facts.get('ansible_machine_id', '')

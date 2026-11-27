@@ -32,6 +32,8 @@ class S3Handler:
             )
 
         self._session = None
+        self._s3_client = None
+        self._s3_resource = None
 
     @property
     def session(self):
@@ -62,7 +64,9 @@ class S3Handler:
         Returns:
             A :class:`boto3.resources.factory.s3.ServiceResource` instance.
         """
-        return self.session.resource('s3', endpoint_url=self.bucket_endpoint)
+        if self._s3_resource is None:
+            self._s3_resource = self.session.resource('s3', endpoint_url=self.bucket_endpoint)
+        return self._s3_resource
 
     def get_s3_client(self):
         """Return a boto3 S3 low-level client connected to the configured endpoint.
@@ -70,7 +74,9 @@ class S3Handler:
         Returns:
             A :class:`botocore.client.S3` instance.
         """
-        return self.session.client('s3', endpoint_url=self.bucket_endpoint)
+        if self._s3_client is None:
+            self._s3_client = self.session.client('s3', endpoint_url=self.bucket_endpoint)
+        return self._s3_client
 
     def upload_file(self, file_name, object_name=None):
         """Upload a file to an S3 bucket
@@ -87,8 +93,8 @@ class S3Handler:
 
         # Upload the file
         try:
-            s3_resource = self.get_s3_resource()
-            s3_resource.meta.client.upload_file(file_name, self.bucket_name, object_name)
+            s3_client = self.get_s3_client()
+            s3_client.upload_file(file_name, self.bucket_name, object_name)
         except ClientError as e:
             logger.error(e)
             return False
@@ -122,9 +128,9 @@ class S3Handler:
         Yields:
             S3 object key strings found under *prefix*.
         """
-        s3_resource = self.get_s3_resource()
+        s3_client = self.get_s3_client()
 
-        paginator = s3_resource.meta.client.get_paginator('list_objects')
+        paginator = s3_client.get_paginator('list_objects')
         for resp in paginator.paginate(Bucket=self.bucket_name, Prefix=prefix):
             for ret_value in resp.get('Contents', []):
                 yield ret_value['Key']

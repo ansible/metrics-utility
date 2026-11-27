@@ -1,6 +1,7 @@
 from unittest.mock import Mock, patch
 
 import pytest
+import requests
 
 from metrics_utility.library.collectors.others.total_workers_vcpu import PrometheusClient
 
@@ -96,7 +97,7 @@ def test_query_http_error(mock_get):
 
     client = PrometheusClient(url='http://localhost:9090')
 
-    with pytest.raises(Exception, match='HTTP error 500'):
+    with pytest.raises(requests.HTTPError, match='HTTP error 500'):
         client.query('up')
 
 
@@ -110,7 +111,7 @@ def test_query_prometheus_api_error(mock_get):
 
     client = PrometheusClient(url='http://localhost:9090')
 
-    with pytest.raises(Exception, match='Prometheus API error'):
+    with pytest.raises(RuntimeError, match='Prometheus API error'):
         client.query('up')
 
 

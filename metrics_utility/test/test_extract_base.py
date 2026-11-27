@@ -6,9 +6,12 @@ import os
 import tarfile
 import tempfile
 
+from unittest.mock import Mock
+
 import pytest
 
 from metrics_utility.automation_controller_billing.extract.base import Base, _safe_extract
+from metrics_utility.automation_controller_billing.extract.extractor_s3 import ExtractorS3
 from metrics_utility.exceptions import MetricsException
 
 
@@ -124,12 +127,6 @@ class TestFilterTarballPaths:
     def _ext(self):
         return _make_extractor()
 
-    # Baseline: None collections returns all paths unchanged
-    def test_none_collections_returns_all_paths(self):
-        ext = self._ext()
-        paths = ['/d/2024/01/01/uuid-1.tar.gz', '/d/2024/01/01/uuid-2.tar.gz']
-        assert ext.filter_tarball_paths(paths, None) == paths
-
     # Forbidden collection names raise
     def test_data_collection_status_raises(self):
         ext = self._ext()
@@ -141,29 +138,78 @@ class TestFilterTarballPaths:
         with pytest.raises(MetricsException):
             ext.filter_tarball_paths(['/d/file.tar.gz'], ['config'])
 
-    # Legacy filename (numeric suffix only) is always included
-    def test_legacy_numeric_suffix_always_included(self):
-        ext = self._ext()
-        paths = ['/data/uuid-123.tar.gz']
-        result = ext.filter_tarball_paths(paths, ['main_host'])
-        assert '/data/uuid-123.tar.gz' in result
-
-    # Modern filename matching collection name is included
-    def test_filename_matching_collection_is_included(self):
-        ext = self._ext()
-        paths = ['/data/uuid-456-main_host.tar.gz']
-        result = ext.filter_tarball_paths(paths, ['main_host'])
-        assert '/data/uuid-456-main_host.tar.gz' in result
-
     def test_empty_paths_returns_empty_list(self):
         ext = self._ext()
         assert ext.filter_tarball_paths([], ['main_host']) == []
+
+    @pytest.mark.parametrize('collections', [None, [], ['main_host']])
+    def test_skips_markers_and_checksums_without_guessing_archive_contents(self, collections):
+        retained = [
+            '/data/uuid-0.tar.gz',
+            '/data/uuid-1-job_host_summary.tar.gz',
+            '/data/uuid-2-main_host.tar.gz',
+            '/data/controller-2026-backup.tar.gz',
+            '/data/source_tarball',
+            '/data/legacy.tgz',
+            '/data/uuid-1-unknown.tar.gz',
+            '/data/uuid-1-config.tar.gz',
+        ]
+        paths = ['/data/', *retained, '/data/_SUCCESS', '/data/archive.tar.gz.sha256']
+        assert self._ext().filter_tarball_paths(paths, collections) == retained
+
+    @pytest.mark.parametrize('archive', ['data/uuid-0-job_host_summary.tar.gz', 'data/renamed-backup'])
+    def test_s3_reads_requested_rows_from_mixed_archive(self, monkeypatch, archive):
+        storage = Mock()
+        storage.list_files.return_value = ['data/', archive, 'data/_SUCCESS']
+        storage.download_file.side_effect = lambda _key, dest: _make_tarball(
+            dest,
+            [
+                ('main_host.csv', 'host_name\nexample\n'),
+                ('job_host_summary.csv', 'count\n9\n'),
+                ('config.json', '{"install_uuid":"abc"}'),
+                ('data_collection_status.csv', 'status\ncomplete\n'),
+            ],
+        )
+        monkeypatch.setattr('metrics_utility.automation_controller_billing.extract.extractor_s3.S3Handler', lambda params: storage)
+        extractor = ExtractorS3({'ship_path': '/data'})
+
+        (batch,) = extractor.iter_batches(datetime.date(2026, 1, 1), ['main_host'], ['config', 'data_collection_status'])
+
+        assert [call.args[0] for call in storage.download_file.call_args_list] == [archive]
+        assert batch['main_host']['host_name'].tolist() == ['example']
+        assert batch['config']['install_uuid'] == 'abc'
+        assert batch['data_collection_status']['status'].tolist() == ['complete']
 
     def test_returns_list_type(self):
         ext = self._ext()
         paths = ['/data/uuid-1-main_host.tar.gz']
         result = ext.filter_tarball_paths(paths, ['main_host'])
         assert isinstance(result, list)
+
+
+class TestFilterAndExtractRenamedBackup:
+    """End-to-end: a renamed archive must still yield the data it contains."""
+
+    def test_renamed_backup_tarball_yields_host_data(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tar_path = os.path.join(tmpdir, 'controller-2026-backup.tar.gz')
+            _make_tarball(
+                tar_path,
+                [
+                    ('main_host.csv', 'hostname\nhost-1\n'),
+                    ('config.json', '{"version": "1.0"}'),
+                ],
+            )
+
+            ext = _make_extractor()
+            selected = ext.filter_tarball_paths([tar_path], ['main_host'])
+            assert selected == [tar_path]
+
+            extract_dir = os.path.join(tmpdir, 'out')
+            data = ext.process_tarballs(tar_path, extract_dir, enabled_set=['main_host', 'config'])
+
+            assert data['config'] == {'version': '1.0'}
+            assert list(data['main_host']['hostname']) == ['host-1']
 
 
 # ---------------------------------------------------------------------------
@@ -259,3 +305,70 @@ class TestSafeExtract:
             extract_dir = os.path.join(tmpdir, 'out')
             with pytest.raises(ValueError, match='Maximum total size exceeded'):
                 _safe_extract(tar_path, extract_dir, max_size=100)
+
+    def test_multi_member_enabled_set_extracts_members_after_skipped_ones(self):
+        """Single-pass iteration keeps every wanted member, even after skips."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tar_path = os.path.join(tmpdir, 'test.tar.gz')
+            _make_tarball(
+                tar_path,
+                [
+                    ('skipped.csv', 'a\n1\n'),
+                    ('main_host.csv', 'col\nval\n'),
+                    ('ignored.sh', '#!/bin/sh'),
+                    ('main_jobevent.csv', 'x\n1\n'),
+                    ('config.json', '{"k": "v"}'),
+                    ('main_host_daily.csv', 'col\nval\n'),
+                ],
+            )
+
+            extract_dir = os.path.join(tmpdir, 'out')
+            _safe_extract(tar_path, extract_dir, enabled_set=['main_host', 'main_jobevent', 'config'])
+
+            assert not os.path.exists(os.path.join(extract_dir, 'skipped.csv'))
+            assert not os.path.exists(os.path.join(extract_dir, 'ignored.sh'))
+            assert not os.path.exists(os.path.join(extract_dir, 'main_host_daily.csv'))
+
+            with open(os.path.join(extract_dir, 'main_host.csv')) as f:
+                assert f.read() == 'col\nval\n'
+            with open(os.path.join(extract_dir, 'main_jobevent.csv')) as f:
+                assert f.read() == 'x\n1\n'
+            with open(os.path.join(extract_dir, 'config.json')) as f:
+                assert f.read() == '{"k": "v"}'
+
+    def test_path_traversal_is_blocked(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tar_path = os.path.join(tmpdir, 'test.tar.gz')
+            _make_tarball(
+                tar_path,
+                [
+                    ('../evil.csv', 'bad\n1\n'),
+                    ('main_host.csv', 'col\nval\n'),
+                ],
+            )
+
+            extract_dir = os.path.join(tmpdir, 'out')
+            _safe_extract(tar_path, extract_dir)
+
+            assert os.path.exists(os.path.join(extract_dir, 'main_host.csv'))
+            assert not os.path.exists(os.path.join(tmpdir, 'evil.csv'))
+
+    def test_symlinks_are_skipped(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tar_path = os.path.join(tmpdir, 'test.tar.gz')
+            with tarfile.open(tar_path, 'w:gz') as tar:
+                data = b'col\nval\n'
+                info = tarfile.TarInfo(name='main_host.csv')
+                info.size = len(data)
+                tar.addfile(info, io.BytesIO(data))
+
+                link = tarfile.TarInfo(name='link.csv')
+                link.type = tarfile.SYMTYPE
+                link.linkname = 'main_host.csv'
+                tar.addfile(link)
+
+            extract_dir = os.path.join(tmpdir, 'out')
+            _safe_extract(tar_path, extract_dir)
+
+            assert os.path.exists(os.path.join(extract_dir, 'main_host.csv'))
+            assert not os.path.lexists(os.path.join(extract_dir, 'link.csv'))

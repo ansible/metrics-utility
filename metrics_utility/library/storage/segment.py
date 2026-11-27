@@ -218,7 +218,7 @@ class StorageSegment:
 
         if data is not None and not isinstance(data, dict):
             msg = f'Data is not a dictionary, got {type(data).__name__}'
-            raise Exception(msg)
+            raise TypeError(msg)
 
         for key, value in data.items():
             if isinstance(value, list):

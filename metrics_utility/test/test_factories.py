@@ -63,8 +63,9 @@ class TestExtractFactory:
         assert isinstance(result, ExtractorS3)
 
     def test_unknown_target_raises(self, tmp_path):
+        factory = self._factory('ftp', tmp_path)
         with pytest.raises(NotSupportedFactory):
-            self._factory('ftp', tmp_path).create()
+            factory.create()
 
 
 # ---------------------------------------------------------------------------
@@ -117,8 +118,9 @@ class TestReportFactory:
 
     def test_unknown_type_raises(self):
         extra = _ccsp_extra_params('UNKNOWN')
+        factory = ReportFactory(dataframes={}, extra_params=extra)
         with pytest.raises(NotSupportedFactory):
-            ReportFactory(dataframes={}, extra_params=extra).create()
+            factory.create()
 
 
 # ---------------------------------------------------------------------------
@@ -144,8 +146,9 @@ class TestReportSaverFactory:
         assert isinstance(result, ReportSaverS3)
 
     def test_unknown_target_raises(self, tmp_path):
+        factory = ReportSaverFactory(ship_target='ftp', extra_params=_saver_params(tmp_path))
         with pytest.raises(NotSupportedFactory):
-            ReportSaverFactory(ship_target='ftp', extra_params=_saver_params(tmp_path)).create()
+            factory.create()
 
 
 # ---------------------------------------------------------------------------
@@ -167,8 +170,9 @@ class TestPackageFactory:
         assert result is PackageS3
 
     def test_unknown_target_raises(self):
+        factory = PackageFactory(ship_target='ftp')
         with pytest.raises(NotSupportedFactory):
-            PackageFactory(ship_target='ftp').create()
+            factory.create()
 
 
 # ---------------------------------------------------------------------------
@@ -179,11 +183,19 @@ class TestPackageFactory:
 def _df_factory(report_type):
     extractor = MagicMock()
     month = datetime.date(2024, 1, 1)
-    extra_params = {'report_type': report_type, 'deduplicator': None, 'optional_sheets': None}
-    return DataframeFactory(extractor=extractor, month=month, extra_params=extra_params)
+    extra_params = {'report_type': report_type, 'deduplicator': None, 'optional_sheets': None, 'month_since': month}
+    return DataframeFactory(extractor=extractor, extra_params=extra_params)
 
 
 class TestDataframeFactory:
+    def test_explicit_date_range_does_not_require_a_month(self):
+        since = datetime.date(2024, 2, 28)
+        until = datetime.date(2024, 3, 1)
+        params = {'report_type': 'CCSP', 'since_date': since, 'until_date': until}
+        engines = DataframeFactory(None, None, params).create()
+
+        assert engines['main_host'].dates() == [since, datetime.date(2024, 2, 29), until]
+
     def test_ccsp_returns_expected_engines(self):
         result = _df_factory('CCSP').create()
         assert isinstance(result['job_host_summary'], DataframeJobhostSummaryUsage)
@@ -201,5 +213,6 @@ class TestDataframeFactory:
         assert isinstance(result['host_metric'], DBDataframeHostMetric)
 
     def test_unknown_type_raises(self):
+        factory = _df_factory('UNKNOWN')
         with pytest.raises(NotSupportedFactory):
-            _df_factory('UNKNOWN').create()
+            factory.create()
