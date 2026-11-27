@@ -2,6 +2,8 @@ from unittest.mock import patch
 
 import pytest
 
+from botocore.exceptions import ClientError
+
 from metrics_utility.automation_controller_billing.base.s3_handler import S3Handler
 from metrics_utility.exceptions import BadShipTarget, MissingRequiredEnvVar
 from metrics_utility.test.util import run_build_int, run_gather_int
@@ -344,3 +346,117 @@ def test_s3handler_implicit_credentials_not_found(mock_session_cls):
     handler = S3Handler({'bucket_region': 'us-east-1'})
     with pytest.raises(ValueError, match=r'METRICS_UTILITY_BUCKET_ACCESS_KEY.*METRICS_UTILITY_BUCKET_SECRET_KEY'):
         _ = handler.session
+
+
+def _mocked_handler(mock_session_cls):
+    """Build an S3Handler backed by a mocked boto3 Session and return (handler, session)."""
+    session = mock_session_cls.return_value
+    handler = S3Handler(
+        {
+            'bucket_name': 'test-bucket',
+            'bucket_endpoint': 'https://s3.example.com',
+            'bucket_region': 'us-east-1',
+            'bucket_access_key': 'AKIA_TEST',
+            'bucket_secret_key': 'secret123',
+        }
+    )
+    return handler, session
+
+
+@patch('metrics_utility.automation_controller_billing.base.s3_handler.boto3.Session')
+def test_s3handler_client_is_cached(mock_session_cls):
+    """get_s3_client() should construct the client once and reuse it."""
+    handler, session = _mocked_handler(mock_session_cls)
+
+    first = handler.get_s3_client()
+    second = handler.get_s3_client()
+    third = handler.get_s3_client()
+
+    assert first is second is third
+    session.client.assert_called_once_with('s3', endpoint_url='https://s3.example.com')
+
+
+@patch('metrics_utility.automation_controller_billing.base.s3_handler.boto3.Session')
+def test_s3handler_resource_is_cached(mock_session_cls):
+    """get_s3_resource() should construct the resource once and reuse it."""
+    handler, session = _mocked_handler(mock_session_cls)
+
+    first = handler.get_s3_resource()
+    second = handler.get_s3_resource()
+    third = handler.get_s3_resource()
+
+    assert first is second is third
+    session.resource.assert_called_once_with('s3', endpoint_url='https://s3.example.com')
+
+
+@patch('metrics_utility.automation_controller_billing.base.s3_handler.boto3.Session')
+def test_s3handler_operations_share_cached_client(mock_session_cls, tmp_path):
+    """list_files/download_file/upload_file should share one client and never build a resource."""
+    handler, session = _mocked_handler(mock_session_cls)
+    client = session.client.return_value
+
+    paginator = client.get_paginator.return_value
+    paginator.paginate.return_value = [
+        {'Contents': [{'Key': 'data/a.csv'}]},
+        {'Contents': [{'Key': 'data/b.csv'}]},
+    ]
+
+    local_file = tmp_path / 'out.csv'
+    local_file.write_text('x')
+
+    assert list(handler.list_files('data')) == ['data/a.csv', 'data/b.csv']
+    assert list(handler.list_files('data')) == ['data/a.csv', 'data/b.csv']
+    assert handler.download_file('data/a.csv', str(local_file)) is True
+    assert handler.download_file('data/a.csv', str(local_file)) is True
+    assert handler.upload_file(str(local_file), 'data/out.csv') is None
+    assert handler.upload_file(str(local_file), 'data/out.csv') is None
+
+    session.client.assert_called_once_with('s3', endpoint_url='https://s3.example.com')
+    session.resource.assert_not_called()
+
+    assert client.download_file.call_count == 2
+    assert client.upload_file.call_count == 2
+    client.upload_file.assert_called_with(str(local_file), 'test-bucket', 'data/out.csv')
+    client.get_paginator.assert_called_with('list_objects')
+
+
+@patch('metrics_utility.automation_controller_billing.base.s3_handler.boto3.Session')
+def test_s3handler_download_file_404_returns_false(mock_session_cls, tmp_path):
+    """download_file() should return False on a 404 ClientError, using the cached client."""
+    handler, session = _mocked_handler(mock_session_cls)
+    client = session.client.return_value
+    client.download_file.side_effect = ClientError({'Error': {'Code': '404'}}, 'HeadObject')
+
+    assert handler.download_file('missing.csv', str(tmp_path / 'missing.csv')) is False
+    client.download_file.assert_called_once_with('test-bucket', 'missing.csv', str(tmp_path / 'missing.csv'))
+    session.client.assert_called_once()
+
+
+@patch('metrics_utility.automation_controller_billing.base.s3_handler.boto3.Session')
+def test_s3handler_download_file_other_error_reraises(mock_session_cls, tmp_path):
+    """download_file() should re-raise non-404 ClientErrors."""
+    handler, session = _mocked_handler(mock_session_cls)
+    client = session.client.return_value
+    error = ClientError({'Error': {'Code': '403'}}, 'HeadObject')
+    client.download_file.side_effect = error
+
+    with pytest.raises(ClientError) as excinfo:
+        handler.download_file('forbidden.csv', str(tmp_path / 'forbidden.csv'))
+    assert excinfo.value is error
+
+
+@patch('metrics_utility.automation_controller_billing.base.s3_handler.boto3.Session')
+def test_s3handler_upload_file_client_error_returns_false(mock_session_cls, tmp_path, caplog):
+    """upload_file() should log and return False on ClientError, using the cached client."""
+    handler, session = _mocked_handler(mock_session_cls)
+    client = session.client.return_value
+    error = ClientError({'Error': {'Code': '403'}}, 'PutObject')
+    client.upload_file.side_effect = error
+
+    local_file = tmp_path / 'out.csv'
+    local_file.write_text('x')
+
+    assert handler.upload_file(str(local_file), 'data/out.csv') is False
+    client.upload_file.assert_called_once_with(str(local_file), 'test-bucket', 'data/out.csv')
+    session.client.assert_called_once()
+    assert str(error) in caplog.text

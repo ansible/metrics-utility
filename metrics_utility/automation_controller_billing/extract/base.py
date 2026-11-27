@@ -11,6 +11,36 @@ from metrics_utility.exceptions import MetricsException
 from metrics_utility.logger import logger
 
 
+_LEGACY_TARBALL_RE = re.compile(r'-\d+\.tar\.gz$')
+# Captures the collector name in ``<name>-<index>-<collector>.tar.gz``.
+_COLLECTION_TARBALL_RE = re.compile(r'-\d+-(\w+)\.tar\.gz$')
+
+# Collector names that may appear as the ``<collector>`` suffix of a tarball name.
+# Mirrors ``VALID_COLLECTORS`` in metrics_utility/management/validation.py, plus
+# ``job_host_summary`` (always gathered, so it is not listed as an *optional*
+# collector there).  A local copy keeps this low-level extract module from
+# importing the management/validation module, which pulls in the CLI/candlepin
+# dependency stack; ``test_extract_base`` asserts the two sets cannot drift.
+_COLLECTOR_TARBALL_NAMES = frozenset(
+    {
+        'controller_version_service',
+        'credentials_service',
+        'execution_environments',
+        'job_host_summary',
+        'job_host_summary_service',
+        'main_host',
+        'main_host_daily',
+        'main_hostmetric',
+        'main_indirectmanagednodeaudit',
+        'main_jobevent',
+        'main_jobevent_service',
+        'table_metadata',
+        'total_workers_vcpu',
+        'unified_jobs',
+    }
+)
+
+
 _main_host_sheets = [
     'inventory_scope',
     'jobs',
@@ -192,8 +222,12 @@ class Base:
     def filter_tarball_paths(self, paths, collections):
         """Filter tarball paths to those matching the requested collection names.
 
-        Paths produced by older versions (without a collection-name suffix) and
-        unknown or ambiguous names are always included to avoid data loss.
+        Only paths whose ``-<index>-<name>.tar.gz`` suffix names a *known*
+        collector that was not requested are dropped.  Paths produced by older
+        versions (without a collection-name suffix), unrecognised suffix names
+        (e.g. a renamed archive such as ``host-2026-backup.tar.gz``), and the
+        special ``unknown`` / ``config`` names are always included to avoid
+        data loss.
 
         Args:
             paths: Iterable of tarball path strings.
@@ -218,22 +252,32 @@ class Base:
         if 'config' in collections:
             raise MetricsException('config is not a valid tarball name filter')
 
+        requested = set(collections)
+
         def match(s):
             # include all files produced by 0.6.0 and lower, and anything with an unexpected name
-            if re.search(r'-\d+.tar.gz$', s):
+            if _LEGACY_TARBALL_RE.search(s):
                 return True
-            if re.search(r'-\d+-\w+.tar.gz$', s) is None:
+
+            suffix = _COLLECTION_TARBALL_RE.search(s)
+            if suffix is None:
                 return True
 
             # should not happen, but make sure we're not ignoring data if it does
-            if s.find('-unknown.') or s.find('-config.'):
+            if '-unknown.' in s or '-config.' in s:
+                return True
+
+            name = suffix.group(1)
+
+            # Only a *known* collector name can be safely skipped; an unrecognised
+            # suffix (e.g. a renamed backup archive) may still contain requested data.
+            if name not in _COLLECTOR_TARBALL_NAMES:
                 return True
 
             # match against collections
-            return any(s.find(f'-{key}.') != -1 for key in collections)
+            return name in requested
 
-        paths = filter(match, paths)
-        return list(paths)
+        return list(filter(match, paths))
 
 
 def _write_member(member_path, file_obj, max_size, total_extracted_size):
@@ -267,9 +311,11 @@ def _safe_extract(tar_path, extract_path, max_files=100, max_size=1024 * 1024 * 
 
     # Ensure the extraction directory exists
     os.makedirs(extract_path, exist_ok=True)
+    extract_path_abs = os.path.abspath(extract_path)
 
     with tarfile.open(tar_path, 'r:*') as tar:
-        for member in tar.getmembers():
+        # Stream members in one pass to avoid rewinding gzip archives.
+        for member in tar:
             # Skip directories and links
             if member.isdir():
                 continue
@@ -288,7 +334,6 @@ def _safe_extract(tar_path, extract_path, max_files=100, max_size=1024 * 1024 * 
 
             # Build a fully qualified path for this member and ensure it stays within extract_path
             member_path = os.path.abspath(os.path.join(extract_path, member.name))
-            extract_path_abs = os.path.abspath(extract_path)
             if not member_path.startswith(extract_path_abs + os.sep):
                 logger.warning(f'Skipping potentially unsafe file (path traversal): {member.name}')
                 continue
