@@ -82,6 +82,10 @@ class DedupRenewal(BaseDedupRenewal):
 
         key_values = {key: self.dataframe[key].to_numpy() for key in self.DUPLICATE_KEYS}
         key_positions = {key: self._value_positions(self.dataframe[key]) for key in self.DUPLICATE_KEYS}
+        # Null values never match (they are absent from key_positions), so they are skipped
+        # before being remembered as expanded. Precomputing the mask keeps that check cheap
+        # and avoids putting NaN/pd.NA into the per-group value sets.
+        key_is_null = {key: self.dataframe[key].isna().to_numpy() for key in self.DUPLICATE_KEYS}
 
         index_labels = self.dataframe.index.tolist()
         index_values = self.dataframe['index'].to_numpy()
@@ -100,13 +104,27 @@ class DedupRenewal(BaseDedupRenewal):
             # Start with hostname matches (null hostnames never match, as before)
             positions = list(key_positions['hostname'].get(key_values['hostname'][position], ()))
             seen = set(positions)
+            # Key values already expanded for this group. Expanding a value yields its whole
+            # bucket at once, so expanding it again can never contribute new positions.
+            expanded_values = {key: set() for key in self.DUPLICATE_KEYS}
 
             for _i in range(iterations):
                 for key in self.DUPLICATE_KEYS:
-                    # Values of every currently matched row, expanded one hop by this key.
+                    positions_for_key = key_positions[key]
+                    values_for_key = key_values[key]
+                    null_for_key = key_is_null[key]
+                    expanded_for_key = expanded_values[key]
+
+                    # Values of every not-yet-expanded matched row, one hop by this key.
                     matched = set()
                     for current in positions:
-                        matches = key_positions[key].get(key_values[key][current])
+                        if null_for_key[current]:
+                            continue
+                        value = values_for_key[current]
+                        if value in expanded_for_key:
+                            continue
+                        expanded_for_key.add(value)
+                        matches = positions_for_key.get(value)
                         if matches:
                             matched.update(matches)
                     matched.difference_update(seen)
@@ -329,17 +347,18 @@ class DedupRenewalExperimental(BaseDedupRenewal):
 
     def _group_by_compound_serial(self, expanded_df, serial_groups, processed_hostname_groups):
         """Helper to group by compound serials."""
-        # Single pass: compound_serial -> ordered unique hostname groups (first-seen order).
+        # Single pass: compound_serial -> hostname groups in first-seen order, deduplicated
+        # with a dict as an ordered set (list membership would be quadratic when many groups
+        # share one serial).
         groups_by_compound_serial = {}
         for compound_serial, hostname_group in zip(expanded_df['compound_serial'], expanded_df['hostname_group']):
             if pd.isna(compound_serial):
                 continue
-            hostname_groups = groups_by_compound_serial.setdefault(compound_serial, [])
-            if hostname_group not in hostname_groups:
-                hostname_groups.append(hostname_group)
+            groups_by_compound_serial.setdefault(compound_serial, {})[hostname_group] = None
 
-        for compound_serial, hostname_groups_in_serial in groups_by_compound_serial.items():
-            if len(hostname_groups_in_serial) > 1:
+        for compound_serial, hostname_groups in groups_by_compound_serial.items():
+            if len(hostname_groups) > 1:
+                hostname_groups_in_serial = list(hostname_groups)
                 canonical_group = hostname_groups_in_serial[0]
                 serial_groups[compound_serial] = {
                     'canonical_group': canonical_group,
@@ -350,15 +369,15 @@ class DedupRenewalExperimental(BaseDedupRenewal):
 
     def _group_by_individual_serial(self, expanded_df, serial_groups, processed_hostname_groups):
         """Helper to group by individual serials."""
-        # Single pass: individual serial -> ordered unique hostname groups (first-seen order).
+        # Single pass: individual serial -> hostname groups in first-seen order, deduplicated
+        # with a dict as an ordered set (list membership would be quadratic when many groups
+        # share one serial).
         groups_by_serial = {}
         for hostname_group, individual_serials in zip(expanded_df['hostname_group'], expanded_df['individual_serials']):
             for serial in individual_serials:
                 if not serial:
                     continue
-                hostname_groups = groups_by_serial.setdefault(serial, [])
-                if hostname_group not in hostname_groups:
-                    hostname_groups.append(hostname_group)
+                groups_by_serial.setdefault(serial, {})[hostname_group] = None
 
         # `processed_hostname_groups` grows while iterating, so keep the original row order.
         for hostname_group, individual_serials in zip(expanded_df['hostname_group'], expanded_df['individual_serials']):
@@ -367,13 +386,13 @@ class DedupRenewalExperimental(BaseDedupRenewal):
             for serial in individual_serials:
                 if not serial:
                     continue
-                hostname_groups_in_serial = groups_by_serial.get(serial, [])
-                if len(hostname_groups_in_serial) > 1:
-                    canonical_group = hostname_groups_in_serial[0]
+                hostname_groups = groups_by_serial.get(serial)
+                if hostname_groups is not None and len(hostname_groups) > 1:
                     serial_key = f'individual:{serial}'
                     if serial_key not in serial_groups:
+                        hostname_groups_in_serial = list(hostname_groups)
                         serial_groups[serial_key] = {
-                            'canonical_group': canonical_group,
+                            'canonical_group': hostname_groups_in_serial[0],
                             'groups_to_merge': hostname_groups_in_serial,
                             'serial_type': 'individual',
                         }

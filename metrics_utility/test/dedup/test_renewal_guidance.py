@@ -852,6 +852,11 @@ DEDUP_DATASETS = {
         ('host-b', '10.0.0.1', 'serial-1', 'machine-1', 9, False),
         ('host-c', '10.0.0.2', 'serial-2', 'machine-2', 1, False),
     ],
+    # Many distinct hostnames reporting one shared serial: a single large group that must
+    # keep first-seen (ascending) order.
+    'shared_serial_many_hosts': [
+        (f'host-{offset:02d}', None, 'shared-serial', f'machine-{offset:02d}', offset, offset % 5 == 0) for offset in range(30)
+    ],
 }
 
 
@@ -1160,3 +1165,91 @@ def test_experimental_group_by_individual_serial_and_direct_merge():
     merged = dedup._merge_hostname_groups(hostname_df, ['host-a', 'host-b'])
     assert merged['hostname'] == 'host-b'
     assert merged['automated_counter'] == 5
+
+
+########################################################################################
+# Scaling regressions: one identifier shared by many rows/groups must not go quadratic.
+# No timing assertions here (they are flaky); these tests assert the optimised paths still
+# match the legacy oracles on the shapes that used to blow up.
+########################################################################################
+
+SHARED_SERIAL_ROW_COUNT = 3000
+SHARED_SERIAL_HOSTNAME_GROUP_COUNT = 8000
+
+
+def make_shared_serial_frame(row_count=SHARED_SERIAL_ROW_COUNT):
+    """Many distinct hostnames, every one reporting the same product serial."""
+    return make_host_metric_frame(
+        [(f'host-{offset:05d}', None, 'shared-product-serial', f'machine-{offset:05d}', offset % 90, offset % 7 == 0) for offset in range(row_count)]
+    )
+
+
+@pytest.mark.parametrize('iterations', [1, 3])
+def test_renewal_shared_serial_matches_legacy(iterations):
+    """One serial shared by thousands of rows must still match the legacy oracle.
+
+    Before the fix, every position in the group re-expanded the same serial bucket once per
+    row and per iteration (O(N^2)); now each value is expanded at most once per group.
+    """
+    frame = make_shared_serial_frame()
+
+    expected = run_dedup(_LegacyDedupRenewal, frame, iterations)
+    actual = run_dedup(DedupRenewal, frame, iterations)
+
+    pd.testing.assert_frame_equal(actual, expected)
+    assert len(actual) == 1
+    assert actual.iloc[0]['hostmetric_record_count'] == SHARED_SERIAL_ROW_COUNT
+    assert len(actual.iloc[0]['hostnames'].split(', ')) == SHARED_SERIAL_ROW_COUNT
+
+
+def _normalize_serial_groups(serial_groups):
+    """Make legacy (numpy array) and optimised (list) groups_to_merge comparable."""
+    return {
+        serial_key: {
+            'canonical_group': info['canonical_group'],
+            'groups_to_merge': list(info['groups_to_merge']),
+            'serial_type': info['serial_type'],
+        }
+        for serial_key, info in serial_groups.items()
+    }
+
+
+@pytest.mark.parametrize(
+    'compound_serial',
+    ['shared-serial/machine-id', None],
+    ids=['compound_serial', 'individual_serial'],
+)
+def test_experimental_serial_grouping_shared_serial_matches_legacy(compound_serial):
+    """Thousands of hostname groups sharing one serial must match the legacy grouping.
+
+    The first pass used `if hostname_group not in hostname_groups` (a list scan per row), so a
+    single shared serial made it O(N^2). Insertion-ordered deduplication keeps the same
+    first-seen order, canonical group and processed-group set.
+    """
+    hostname_groups = [f'host-{offset:05d}' for offset in range(SHARED_SERIAL_HOSTNAME_GROUP_COUNT)]
+    expanded_df = pd.DataFrame(
+        {
+            'hostname': hostname_groups,
+            'hostname_group': hostname_groups,
+            'compound_serial': [compound_serial] * SHARED_SERIAL_HOSTNAME_GROUP_COUNT,
+            'individual_serials': [['shared-serial'] for _ in hostname_groups],
+        }
+    )
+
+    dataframes = {'host_metric': Mock()}
+    dataframes['host_metric'].build_dataframe.return_value = pd.DataFrame()
+    extra_params = {'report_renewal_guidance_dedup_iterations': '3'}
+    dedup = DedupRenewalExperimental(dataframes, extra_params)
+    legacy = _LegacyDedupRenewalExperimental(dataframes, extra_params)
+
+    serial_groups, processed_hostname_groups = dedup._create_serial_groups(expanded_df)
+    legacy_serial_groups, legacy_processed_hostname_groups = legacy._create_serial_groups(expanded_df)
+
+    assert _normalize_serial_groups(serial_groups) == _normalize_serial_groups(legacy_serial_groups)
+    assert processed_hostname_groups == legacy_processed_hostname_groups == set(hostname_groups)
+
+    # Exactly one serial group, spanning every hostname group in first-seen order.
+    assert len(serial_groups) == 1
+    (serial_info,) = serial_groups.values()
+    assert serial_info['groups_to_merge'] == hostname_groups
+    assert serial_info['canonical_group'] == hostname_groups[0]
