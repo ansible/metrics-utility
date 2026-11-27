@@ -93,7 +93,9 @@ container
 * `METRICS_UTILITY_BUCKET_REGION` - `bucket_region`
 * `METRICS_UTILITY_BUCKET_SECRET_KEY` - `bucket_secret_key`
 
-S3 access and secret keys are optional when the runtime can resolve credentials through the default boto3 credential chain (for example, IRSA or an EC2 instance profile). If one key is set, both must be set. S3 credentials and bucket transport settings are not written into gathered `config.json` payloads.
+S3 access and secret keys are optional when the runtime can resolve credentials through the default boto3 credential chain (for example, IRSA or an EC2 instance profile). If one key is set, both must be set. Newly gathered `config.json` payloads omit S3 credentials and bucket transport settings.
+
+If you gathered data with explicit S3 keys on an affected version, existing archives (including local dry-run archives) may still contain those keys. Rotate the affected keys and review access to those archives.
 
 
 ### Used by CRC
