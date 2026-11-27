@@ -12,7 +12,33 @@ from metrics_utility.logger import logger
 
 
 _LEGACY_TARBALL_RE = re.compile(r'-\d+\.tar\.gz$')
-_COLLECTION_TARBALL_RE = re.compile(r'-\d+-\w+\.tar\.gz$')
+# Captures the collector name in ``<name>-<index>-<collector>.tar.gz``.
+_COLLECTION_TARBALL_RE = re.compile(r'-\d+-(\w+)\.tar\.gz$')
+
+# Collector names that may appear as the ``<collector>`` suffix of a tarball name.
+# Mirrors ``VALID_COLLECTORS`` in metrics_utility/management/validation.py, plus
+# ``job_host_summary`` (always gathered, so it is not listed as an *optional*
+# collector there).  A local copy keeps this low-level extract module from
+# importing the management/validation module, which pulls in the CLI/candlepin
+# dependency stack; ``test_extract_base`` asserts the two sets cannot drift.
+_COLLECTOR_TARBALL_NAMES = frozenset(
+    {
+        'controller_version_service',
+        'credentials_service',
+        'execution_environments',
+        'job_host_summary',
+        'job_host_summary_service',
+        'main_host',
+        'main_host_daily',
+        'main_hostmetric',
+        'main_indirectmanagednodeaudit',
+        'main_jobevent',
+        'main_jobevent_service',
+        'table_metadata',
+        'total_workers_vcpu',
+        'unified_jobs',
+    }
+)
 
 
 _main_host_sheets = [
@@ -196,8 +222,12 @@ class Base:
     def filter_tarball_paths(self, paths, collections):
         """Filter tarball paths to those matching the requested collection names.
 
-        Paths produced by older versions (without a collection-name suffix) and
-        unknown or ambiguous names are always included to avoid data loss.
+        Only paths whose ``-<index>-<name>.tar.gz`` suffix names a *known*
+        collector that was not requested are dropped.  Paths produced by older
+        versions (without a collection-name suffix), unrecognised suffix names
+        (e.g. a renamed archive such as ``host-2026-backup.tar.gz``), and the
+        special ``unknown`` / ``config`` names are always included to avoid
+        data loss.
 
         Args:
             paths: Iterable of tarball path strings.
@@ -222,21 +252,30 @@ class Base:
         if 'config' in collections:
             raise MetricsException('config is not a valid tarball name filter')
 
-        needles = tuple(f'-{key}.' for key in collections)
+        requested = set(collections)
 
         def match(s):
             # include all files produced by 0.6.0 and lower, and anything with an unexpected name
             if _LEGACY_TARBALL_RE.search(s):
                 return True
-            if _COLLECTION_TARBALL_RE.search(s) is None:
+
+            suffix = _COLLECTION_TARBALL_RE.search(s)
+            if suffix is None:
                 return True
 
             # should not happen, but make sure we're not ignoring data if it does
             if '-unknown.' in s or '-config.' in s:
                 return True
 
+            name = suffix.group(1)
+
+            # Only a *known* collector name can be safely skipped; an unrecognised
+            # suffix (e.g. a renamed backup archive) may still contain requested data.
+            if name not in _COLLECTOR_TARBALL_NAMES:
+                return True
+
             # match against collections
-            return any(needle in s for needle in needles)
+            return name in requested
 
         return list(filter(match, paths))
 

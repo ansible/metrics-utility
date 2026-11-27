@@ -10,11 +10,13 @@ import pytest
 
 from metrics_utility.automation_controller_billing.extract.base import (
     _COLLECTION_TARBALL_RE,
+    _COLLECTOR_TARBALL_NAMES,
     _LEGACY_TARBALL_RE,
     Base,
     _safe_extract,
 )
 from metrics_utility.exceptions import MetricsException
+from metrics_utility.management.validation import VALID_COLLECTORS
 
 
 # ---------------------------------------------------------------------------
@@ -240,6 +242,74 @@ class TestFilterTarballPaths:
         weird = '/data/uuid-0-main_hostXtarXgz'
         assert _COLLECTION_TARBALL_RE.search(weird) is None
         assert ext.filter_tarball_paths([weird], ['main_jobevent']) == [weird]
+
+    # A suffix that is not a known collector name must never be dropped, even
+    # though it looks like a modern collection tarball (renamed backup archive).
+    def test_unknown_collection_suffix_name_is_included(self):
+        ext = self._ext()
+        paths = ['/data/2026/01/01/controller-2026-backup.tar.gz']
+        assert ext.filter_tarball_paths(paths, ['main_host']) == paths
+
+    def test_unknown_collection_suffix_is_not_mistaken_for_a_collection(self):
+        ext = self._ext()
+        # "backup" contains none of the requested needle names, yet must be kept.
+        paths = [
+            '/data/controller-2026-backup.tar.gz',
+            '/data/uuid-0-main_jobevent.tar.gz',
+        ]
+        assert ext.filter_tarball_paths(paths, ['main_host']) == ['/data/controller-2026-backup.tar.gz']
+
+    # Known collector names are still filtered by the requested collections.
+    def test_known_unrequested_collector_excluded_and_requested_included(self):
+        ext = self._ext()
+        paths = [
+            '/data/uuid-0-main_jobevent.tar.gz',
+            '/data/uuid-1-main_host.tar.gz',
+        ]
+        result = ext.filter_tarball_paths(paths, ['main_host'])
+        assert result == ['/data/uuid-1-main_host.tar.gz']
+
+    def test_known_requested_collector_included(self):
+        ext = self._ext()
+        paths = ['/data/uuid-0-main_jobevent.tar.gz']
+        assert ext.filter_tarball_paths(paths, ['main_jobevent']) == paths
+
+
+class TestCollectorTarballNames:
+    """The local collector-name set must not drift from VALID_COLLECTORS."""
+
+    def test_matches_validation_collectors(self):
+        # job_host_summary is always gathered, so validation.py does not list it
+        # as an *optional* collector; every other known name must match exactly.
+        assert _COLLECTOR_TARBALL_NAMES - {'job_host_summary'} == set(VALID_COLLECTORS)
+
+    def test_contains_all_valid_collectors(self):
+        assert set(VALID_COLLECTORS) <= _COLLECTOR_TARBALL_NAMES
+
+
+class TestFilterAndExtractRenamedBackup:
+    """End-to-end: a renamed archive must still yield the data it contains."""
+
+    def test_renamed_backup_tarball_yields_host_data(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tar_path = os.path.join(tmpdir, 'controller-2026-backup.tar.gz')
+            _make_tarball(
+                tar_path,
+                [
+                    ('main_host.csv', 'hostname\nhost-1\n'),
+                    ('config.json', '{"version": "1.0"}'),
+                ],
+            )
+
+            ext = _make_extractor()
+            selected = ext.filter_tarball_paths([tar_path], ['main_host'])
+            assert selected == [tar_path]
+
+            extract_dir = os.path.join(tmpdir, 'out')
+            data = ext.process_tarballs(tar_path, extract_dir, enabled_set=['main_host', 'config'])
+
+            assert data['config'] == {'version': '1.0'}
+            assert list(data['main_host']['hostname']) == ['host-1']
 
 
 # ---------------------------------------------------------------------------
