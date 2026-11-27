@@ -2,7 +2,6 @@
 
 import json
 import os
-import re
 import tarfile
 
 import pandas as pd
@@ -190,50 +189,22 @@ class Base:
         return bool(set(sheet_options) & set(sheets_required))
 
     def filter_tarball_paths(self, paths, collections):
-        """Filter tarball paths to those matching the requested collection names.
+        """Return all .tar.gz candidates, ignoring other objects and partition markers.
 
-        Paths produced by older versions (without a collection-name suffix) and
-        unknown or ambiguous names are always included to avoid data loss.
-
-        Args:
-            paths: Iterable of tarball path strings.
-            collections: List of collector names to match (e.g. ``['main_host']``),
-                or None to return all paths.
-
-        Returns:
-            Filtered list of matching path strings.
+        Package.make_tgz names a mixed archive after its last collection. Even a
+        recognized suffix cannot rule out other collections inside the archive.
 
         Raises:
             :exc:`~metrics_utility.exceptions.MetricsException`: If
                 ``'data_collection_status'`` or ``'config'`` is in *collections*
                 (these are never used as tarball name filters).
         """
-        # collections=['main_host', 'foo'] - returns only filenames matching *-main_host.tar.gz or *-foo.tar.gz
-        if collections is None:
-            return paths
+        if collections is not None:
+            for key in ('data_collection_status', 'config'):
+                if key in collections:
+                    raise MetricsException(f'{key} is not a valid tarball name filter')
 
-        if 'data_collection_status' in collections:
-            raise MetricsException('data_collection_status is not a valid tarball name filter')
-
-        if 'config' in collections:
-            raise MetricsException('config is not a valid tarball name filter')
-
-        def match(s):
-            # include all files produced by 0.6.0 and lower, and anything with an unexpected name
-            if re.search(r'-\d+.tar.gz$', s):
-                return True
-            if re.search(r'-\d+-\w+.tar.gz$', s) is None:
-                return True
-
-            # should not happen, but make sure we're not ignoring data if it does
-            if s.find('-unknown.') or s.find('-config.'):
-                return True
-
-            # match against collections
-            return any(s.find(f'-{key}.') != -1 for key in collections)
-
-        paths = filter(match, paths)
-        return list(paths)
+        return [path for path in paths if path.endswith('.tar.gz')]
 
 
 def _write_member(member_path, file_obj, max_size, total_extracted_size):
@@ -278,7 +249,7 @@ def _safe_extract(tar_path, extract_path, max_files=100, max_size=1024 * 1024 * 
                 continue
 
             # Only allow .json or .csv
-            if not (member.name.endswith('.json') or member.name.endswith('.csv')):
+            if not member.name.endswith(('.json', '.csv')):
                 continue
 
             # Only files from enabled_set (+ extension)

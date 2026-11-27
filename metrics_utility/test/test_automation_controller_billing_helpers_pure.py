@@ -209,7 +209,8 @@ class TestMakeHashable:
         _ = left < right
         ordered = sorted([right, left])
         assert len(ordered) == 2
-        assert left in ordered and right in ordered
+        assert left in ordered
+        assert right in ordered
 
     def test_hashable_dict_lt_non_dict_returns_not_implemented(self):
         assert HashableDict({'a': 1}).__lt__(5) is NotImplemented

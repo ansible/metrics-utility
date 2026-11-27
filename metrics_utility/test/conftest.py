@@ -63,7 +63,7 @@ def setup_processed_dataframe(fixed_now):
     assert pd.api.types.is_datetime64_any_dtype(processed_df['last_automation'])
     assert pd.api.types.is_datetime64_any_dtype(processed_df['last_deleted'])
 
-    yield processed_df
+    return processed_df
 
 
 def validate_sheet_tab_names(file_path, expected_sheets, excluded_sheets=[]):

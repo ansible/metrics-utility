@@ -2713,7 +2713,8 @@ def validate_use_cases(actual_managed_nodes):
     cf = get_canonical_facts(web02)
     assert cf.get('ansible_machine_id') == ['f3e2da65c5d34e59151db7ec18b868d9'], 'Should have correct machine_id'
     hostnames = cf.get('host_name', [])
-    assert 'web02.external' in hostnames and 'web02.internal' in hostnames, 'Should show both hostnames'
+    assert 'web02.external' in hostnames
+    assert 'web02.internal' in hostnames
 
     # Test Case 1.4: db02.dev + db02.staging (2 entries → 1)
     db02 = find_host('db02.dev')
@@ -2721,7 +2722,8 @@ def validate_use_cases(actual_managed_nodes):
     cf = get_canonical_facts(db02)
     assert cf.get('ansible_machine_id') == ['eddfa033379afb7784abb2e4c7dc2cf1'], 'Should have correct machine_id'
     hostnames = cf.get('host_name', [])
-    assert 'db02.dev' in hostnames and 'db02.staging' in hostnames, 'Should show both hostnames'
+    assert 'db02.dev' in hostnames
+    assert 'db02.staging' in hostnames
 
     # Test Case 1.5: web03.internal + web03.prod.internal (2 entries → 1)
     web03 = find_host('web03.internal')
@@ -2748,7 +2750,8 @@ def validate_use_cases(actual_managed_nodes):
     log01 = find_host('log01.company.com')
     assert log01 is not None, 'log01.company.com should be present'
     cf = get_canonical_facts(log01)
-    assert not cf.get('ansible_machine_id') and not cf.get('ansible_product_serial'), 'Should have no canonical facts'
+    assert not cf.get('ansible_machine_id')
+    assert not cf.get('ansible_product_serial')
 
     # Test Case 2.3: web04.dev and web04.staging (different machines)
     web04_dev = find_host('web04.dev')
@@ -2796,7 +2799,8 @@ def validate_use_cases(actual_managed_nodes):
     cf = get_canonical_facts(nat_entry)
     hostnames = cf.get('host_name', [])
     # NAT hosts should be merged under IP (expected false positive)
-    assert 'nat-host-01.external' in hostnames and 'nat-host-02.external' in hostnames, 'NAT hosts should be wrongly merged'
+    assert 'nat-host-01.external' in hostnames
+    assert 'nat-host-02.external' in hostnames
 
     # Test Case 5.1: api-server variants
     api_server = find_host('api-server')

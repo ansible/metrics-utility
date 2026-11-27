@@ -479,8 +479,17 @@ class TestBaseSummarizeMergedDataframes:
     def test_combine_json_values_missing_source_column_raises(self, missing):
         df = pd.DataFrame({'facts_x': [{'cpu': 'left'}], 'facts_y': [{'cpu': 'right'}]}).drop(columns=missing)
 
+        engine = self._make_base()
         with pytest.raises(KeyError, match=missing):
-            self._make_base().summarize_merged_dataframes(df, ['facts'], operations={'facts': 'combine_json_values'})
+            engine.summarize_merged_dataframes(df, ['facts'], operations={'facts': 'combine_json_values'})
+
+    def test_duplicate_group_cannot_multiply_billing_counts(self):
+        engine = self._make_base()
+        rollup = pd.DataFrame({'host_name': ['a'], 'count': [5]}).set_index('host_name')
+        batch = pd.DataFrame({'host_name': ['a', 'a'], 'count': [1, 2]}).set_index('host_name')
+
+        with pytest.raises(pd.errors.MergeError):
+            engine.merge(rollup, batch)
 
     def test_combine_json_values_across_outer_merged_batches(self):
         class FactsBase(ConcreteBase):

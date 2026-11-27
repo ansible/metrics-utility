@@ -81,13 +81,13 @@ class DictOutput:
             The dict unchanged, or None.
 
         Raises:
-            Exception: If *data* is neither a dict nor None.
+            TypeError: If *data* is neither a dict nor None.
         """
         if data is None:
             return None
 
         if type(data) is not dict:
-            raise Exception('data must be a dict, or None')
+            raise TypeError('data must be a dict, or None')
 
         return data
 
@@ -121,13 +121,13 @@ class CollectionOutput(DictOutput):
             The list unchanged, or None.
 
         Raises:
-            Exception: If *filenames* is neither a list nor None.
+            TypeError: If *filenames* is neither a list nor None.
         """
         if filenames is None:
             return None
 
         if type(filenames) is not list:
-            raise Exception('filenames must be a list, or None')
+            raise TypeError('filenames must be a list, or None')
 
         return filenames
 

@@ -6,9 +6,12 @@ import os
 import tarfile
 import tempfile
 
+from unittest.mock import Mock
+
 import pytest
 
 from metrics_utility.automation_controller_billing.extract.base import Base, _safe_extract
+from metrics_utility.automation_controller_billing.extract.extractor_s3 import ExtractorS3
 from metrics_utility.exceptions import MetricsException
 
 
@@ -124,12 +127,6 @@ class TestFilterTarballPaths:
     def _ext(self):
         return _make_extractor()
 
-    # Baseline: None collections returns all paths unchanged
-    def test_none_collections_returns_all_paths(self):
-        ext = self._ext()
-        paths = ['/d/2024/01/01/uuid-1.tar.gz', '/d/2024/01/01/uuid-2.tar.gz']
-        assert ext.filter_tarball_paths(paths, None) == paths
-
     # Forbidden collection names raise
     def test_data_collection_status_raises(self):
         ext = self._ext()
@@ -141,23 +138,43 @@ class TestFilterTarballPaths:
         with pytest.raises(MetricsException):
             ext.filter_tarball_paths(['/d/file.tar.gz'], ['config'])
 
-    # Legacy filename (numeric suffix only) is always included
-    def test_legacy_numeric_suffix_always_included(self):
-        ext = self._ext()
-        paths = ['/data/uuid-123.tar.gz']
-        result = ext.filter_tarball_paths(paths, ['main_host'])
-        assert '/data/uuid-123.tar.gz' in result
-
-    # Modern filename matching collection name is included
-    def test_filename_matching_collection_is_included(self):
-        ext = self._ext()
-        paths = ['/data/uuid-456-main_host.tar.gz']
-        result = ext.filter_tarball_paths(paths, ['main_host'])
-        assert '/data/uuid-456-main_host.tar.gz' in result
-
     def test_empty_paths_returns_empty_list(self):
         ext = self._ext()
         assert ext.filter_tarball_paths([], ['main_host']) == []
+
+    @pytest.mark.parametrize('collections', [None, [], ['main_host']])
+    def test_skips_only_non_tarball_objects(self, collections):
+        retained = [
+            '/data/uuid-0.tar.gz',
+            '/data/uuid-1-job_host_summary.tar.gz',
+            '/data/uuid-2-main_host.tar.gz',
+            '/data/controller-2026-backup.tar.gz',
+        ]
+        paths = ['/data/', *retained, '/data/archive.tar.gz.sha256']
+        assert self._ext().filter_tarball_paths(paths, collections) == retained
+
+    def test_s3_reads_mixed_archive_named_after_unrequested_last_collector(self, monkeypatch):
+        archive = 'data/uuid-0-job_host_summary.tar.gz'
+        storage = Mock()
+        storage.list_files.return_value = ['data/', archive, 'data/_SUCCESS']
+        storage.download_file.side_effect = lambda _key, dest: _make_tarball(
+            dest,
+            [
+                ('main_host.csv', 'host_name\nexample\n'),
+                ('job_host_summary.csv', 'count\n9\n'),
+                ('config.json', '{"install_uuid":"abc"}'),
+                ('data_collection_status.csv', 'status\ncomplete\n'),
+            ],
+        )
+        monkeypatch.setattr('metrics_utility.automation_controller_billing.extract.extractor_s3.S3Handler', lambda params: storage)
+        extractor = ExtractorS3({'ship_path': '/data'})
+
+        (batch,) = extractor.iter_batches(datetime.date(2026, 1, 1), ['main_host'], ['config', 'data_collection_status'])
+
+        assert [call.args[0] for call in storage.download_file.call_args_list] == [archive]
+        assert batch['main_host']['host_name'].tolist() == ['example']
+        assert batch['config']['install_uuid'] == 'abc'
+        assert batch['data_collection_status']['status'].tolist() == ['complete']
 
     def test_returns_list_type(self):
         ext = self._ext()

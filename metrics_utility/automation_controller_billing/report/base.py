@@ -283,7 +283,7 @@ class Base:
 
         return destination_dataframe
 
-    def _build_data_section_scope(self, current_row, ws, dataframe, mode=None):
+    def _build_data_section_scope(self, current_row, ws, dataframe):
         """Write the inventory-scope section into *ws* starting at *current_row*.
 
         Copies only the columns needed for the sheet, leaving *dataframe*
@@ -378,7 +378,7 @@ class Base:
         def extract_infra_info(facts):
             def extract_value(value):
                 if isinstance(value, set):
-                    return list(value)[0] if value else 'Unknown'
+                    return next(iter(value), 'Unknown')
                 elif isinstance(value, list):
                     return value[0] if value else 'Unknown'
                 elif isinstance(value, str):

@@ -120,11 +120,9 @@ def until_slicing(_key, _last_gather, **kwargs):
 ### shared collectors
 
 
-# FIXME: move this one to caller?
 @register('config', '2.0', format='json', config=True)
 def cli_config(since, until, output):
-    # runs once, used in all the tarballs
-    # FIXME: , billing_provider_params={dict} rather than {} getting overwritten in collector.gather
+    """Collect shared config once; the billing collector adds its provider metadata."""
     try:
         collector = config_django()
         return output.as_dict(collector)

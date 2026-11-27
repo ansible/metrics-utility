@@ -54,7 +54,6 @@ def clear_env(monkeypatch):
     ]
     for key in keys:
         monkeypatch.delenv(key, raising=False)
-    yield
 
 
 def test_validate_report_type_build_valid(monkeypatch):

@@ -53,10 +53,9 @@ def get_organization_filter():
     return os.getenv('METRICS_UTILITY_ORGANIZATION_FILTER').rstrip(';')
 
 
-def _set_report_destination(extra_params, opt_since, opt_until, month, opt_month, output_format):
+def _set_report_destination(extra_params, ship_path, opt_since, opt_until, month, opt_month, output_format):
     """Set the report period and destination, returning any date range."""
     report_type = extra_params['report_type']
-    ship_path = extra_params['ship_path']
     if opt_since is not None:
         since_date = opt_since.date()
         until_date = opt_until.date() if opt_until else datetime.date.today()
@@ -188,8 +187,8 @@ class Command(BaseCommand):
 
         ship_target = os.getenv('METRICS_UTILITY_SHIP_TARGET')
 
-        # FIXME: separate params per factory
-        extra_params = self._handle_extra_params(ship_target)
+        storage_params = self._handle_ship_target(ship_target)
+        extra_params = self._report_params()
         extra_params['opt_since'] = opt_since
         extra_params['opt_until'] = opt_until
         extra_params['ephemeral_days'] = opt_ephemeral
@@ -198,9 +197,13 @@ class Command(BaseCommand):
         extra_params['deduplicator'] = os.getenv('METRICS_UTILITY_DEDUPLICATOR') or None
 
         # Determine destination path for generated report and skip processing if it exists
-        since_date, until_date = _set_report_destination(extra_params, opt_since, opt_until, month, opt_month, output_format)
+        since_date, until_date = _set_report_destination(
+            extra_params, storage_params['ship_path'], opt_since, opt_until, month, opt_month, output_format
+        )
 
-        report_saver_engine = ReportSaverFactory(ship_target, extra_params=extra_params).create()
+        report_saver_engine = ReportSaverFactory(
+            ship_target, extra_params={**storage_params, 'report_spreadsheet_destination_path': extra_params['report_spreadsheet_destination_path']}
+        ).create()
 
         if report_saver_engine.report_exist() and not opt_force:
             # If the monthly report already exists, skip the generation
@@ -211,12 +214,15 @@ class Command(BaseCommand):
             )
             return
 
-        extractor = ExtractorFactory(ship_target, extra_params).create()
+        extractor_params = {**storage_params, 'optional_sheets': extra_params['optional_sheets'], 'opt_since': opt_since}
+        extractor = ExtractorFactory(ship_target, extractor_params).create()
 
-        # FIXME move from month to extra_params
-        dataframes = DataframeFactory(extractor=extractor, month=month, extra_params=extra_params).create()
+        common = {'report_type': extra_params['report_type'], 'deduplicator': extra_params['deduplicator']}
+        dataframe_params = {**common, 'month_since': month, 'since_date': since_date, 'until_date': until_date}
+        dataframes = DataframeFactory(extractor=extractor, extra_params=dataframe_params).create()
 
-        dedup = DedupFactory(dataframes=dataframes, extra_params=extra_params).create()
+        dedup_params = {**common, 'report_renewal_guidance_dedup_iterations': extra_params['report_renewal_guidance_dedup_iterations']}
+        dedup = DedupFactory(dataframes=dataframes, extra_params=dedup_params).create()
         dataframes = dedup.run()
 
         if all(dataframe is None or dataframe.empty for _name, dataframe in dataframes.items()):
@@ -264,24 +270,9 @@ class Command(BaseCommand):
             allowed = ', '.join(['controller_db', 'directory', 's3'])
             raise BadShipTarget(f'Unexpected value for METRICS_UTILITY_SHIP_TARGET env var ({ship_target}), allowed values: {allowed}')
 
-    def _handle_extra_params(self, ship_target=None):
-        """Build the full extra_params dict from environment variables.
-
-        Args:
-            ship_target: Value of METRICS_UTILITY_SHIP_TARGET.
-
-        Returns:
-            Dict of all parameters needed by the dataframe, dedup, report,
-            and report-saver factories.
-
-        Raises:
-            :exc:`~metrics_utility.exceptions.MissingRequiredEnvVar`: If
-                METRICS_UTILITY_REPORT_TYPE is missing.
-            :exc:`~metrics_utility.exceptions.BadRequiredEnvVar`: If
-                METRICS_UTILITY_REPORT_TYPE has an unsupported value.
-        """
-        base = self._handle_ship_target(ship_target)
-
+    @staticmethod
+    def _report_params():
+        """Read report configuration without including storage credentials."""
         report_type = os.getenv('METRICS_UTILITY_REPORT_TYPE')
         price_per_node = float(os.getenv('METRICS_UTILITY_PRICE_PER_NODE', 0))
 
@@ -293,34 +284,31 @@ class Command(BaseCommand):
                 "Bad value for required env variable METRICS_UTILITY_REPORT_TYPE, allowed values are: ['CCSP', 'CCSPv2', 'RENEWAL_GUIDANCE']"
             )
 
-        base.update(
-            {
-                'report_type': report_type,
-                'price_per_node': price_per_node,
-                # XLSX specific params
-                'report_sku': os.getenv('METRICS_UTILITY_REPORT_SKU', ''),
-                'report_sku_description': os.getenv('METRICS_UTILITY_REPORT_SKU_DESCRIPTION', ''),
-                'report_h1_heading': os.getenv('METRICS_UTILITY_REPORT_H1_HEADING', ''),
-                'report_company_name': os.getenv('METRICS_UTILITY_REPORT_COMPANY_NAME', ''),
-                'report_email': os.getenv('METRICS_UTILITY_REPORT_EMAIL', ''),
-                'report_rhn_login': os.getenv('METRICS_UTILITY_REPORT_RHN_LOGIN', ''),
-                'report_po_number': os.getenv('METRICS_UTILITY_REPORT_PO_NUMBER', ''),
-                'report_company_business_leader': os.getenv('METRICS_UTILITY_REPORT_COMPANY_BUSINESS_LEADER', ''),
-                'report_company_procurement_leader': os.getenv('METRICS_UTILITY_REPORT_COMPANY_PROCUREMENT_LEADER', ''),
-                'report_end_user_company_name': os.getenv('METRICS_UTILITY_REPORT_END_USER_COMPANY_NAME', ''),
-                'report_end_user_company_city': os.getenv('METRICS_UTILITY_REPORT_END_USER_CITY', ''),
-                'report_end_user_company_state': os.getenv('METRICS_UTILITY_REPORT_END_USER_STATE', ''),
-                'report_end_user_company_country': os.getenv('METRICS_UTILITY_REPORT_END_USER_COUNTRY', ''),
-                # Renewal guidance specific params
-                'report_renewal_guidance_dedup_iterations': os.getenv('REPORT_RENEWAL_GUIDANCE_DEDUP_ITERATIONS', '3'),
-                'report_organization_filter': get_organization_filter(),
-                # optional bits
-                'optional_sheets': os.getenv(
-                    'METRICS_UTILITY_OPTIONAL_CCSP_REPORT_SHEETS',
-                    'ccsp_summary,managed_nodes,usage_by_organizations,usage_by_collections,usage_by_roles,usage_by_modules',
-                )
-                .rstrip(',')
-                .split(','),
-            }
-        )
-        return base
+        return {
+            'report_type': report_type,
+            'price_per_node': price_per_node,
+            # XLSX specific params
+            'report_sku': os.getenv('METRICS_UTILITY_REPORT_SKU', ''),
+            'report_sku_description': os.getenv('METRICS_UTILITY_REPORT_SKU_DESCRIPTION', ''),
+            'report_h1_heading': os.getenv('METRICS_UTILITY_REPORT_H1_HEADING', ''),
+            'report_company_name': os.getenv('METRICS_UTILITY_REPORT_COMPANY_NAME', ''),
+            'report_email': os.getenv('METRICS_UTILITY_REPORT_EMAIL', ''),
+            'report_rhn_login': os.getenv('METRICS_UTILITY_REPORT_RHN_LOGIN', ''),
+            'report_po_number': os.getenv('METRICS_UTILITY_REPORT_PO_NUMBER', ''),
+            'report_company_business_leader': os.getenv('METRICS_UTILITY_REPORT_COMPANY_BUSINESS_LEADER', ''),
+            'report_company_procurement_leader': os.getenv('METRICS_UTILITY_REPORT_COMPANY_PROCUREMENT_LEADER', ''),
+            'report_end_user_company_name': os.getenv('METRICS_UTILITY_REPORT_END_USER_COMPANY_NAME', ''),
+            'report_end_user_company_city': os.getenv('METRICS_UTILITY_REPORT_END_USER_CITY', ''),
+            'report_end_user_company_state': os.getenv('METRICS_UTILITY_REPORT_END_USER_STATE', ''),
+            'report_end_user_company_country': os.getenv('METRICS_UTILITY_REPORT_END_USER_COUNTRY', ''),
+            # Renewal guidance specific params
+            'report_renewal_guidance_dedup_iterations': os.getenv('REPORT_RENEWAL_GUIDANCE_DEDUP_ITERATIONS', '3'),
+            'report_organization_filter': get_organization_filter(),
+            # optional bits
+            'optional_sheets': os.getenv(
+                'METRICS_UTILITY_OPTIONAL_CCSP_REPORT_SHEETS',
+                'ccsp_summary,managed_nodes,usage_by_organizations,usage_by_collections,usage_by_roles,usage_by_modules',
+            )
+            .rstrip(',')
+            .split(','),
+        }

@@ -11,17 +11,17 @@ from metrics_utility.exceptions import NotSupportedFactory
 class Factory:  # DataframeFactory
     """Creates the dict of dataframe engines required for the given report type."""
 
-    def __init__(self, extractor, month, extra_params):
+    def __init__(self, extractor, month=None, extra_params=None):
         """Initialise the dataframe factory.
 
         Args:
             extractor: An extractor instance used to load tarballs.
-            month: A :class:`datetime.date` representing the reporting month.
+            month: A :class:`datetime.date` overriding the reporting month from extra_params.
             extra_params: Dict of configuration parameters (report_type, deduplicator, etc.).
         """
         self.extractor = extractor
-        self.month = month
-        self.extra_params = extra_params
+        self.extra_params = extra_params if extra_params is not None else {}
+        self.month = month if month is not None else self.extra_params['month_since']
 
     def create(self):
         """Return a dict of dataframe engine instances for the configured report type.

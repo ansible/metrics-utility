@@ -175,15 +175,16 @@ class PrometheusClient:
             Parsed JSON dict.
 
         Raises:
-            Exception: On non-200 HTTP status or a Prometheus API error.
+            requests.HTTPError: On non-200 HTTP status.
+            RuntimeError: On a Prometheus API error.
         """
         response = self.session.get(url, params=params, timeout=self.timeout)
         if response.status_code != 200:
-            raise Exception(f'HTTP error {response.status_code}: {response.text}')
+            raise requests.HTTPError(f'HTTP error {response.status_code}: {response.text}', response=response)
 
         data = response.json()
         if data.get('status') != 'success':
-            raise Exception(f'Prometheus API error: {data.get("error", "Unknown error")}')
+            raise RuntimeError(f'Prometheus API error: {data.get("error", "Unknown error")}')
 
         return data
 
