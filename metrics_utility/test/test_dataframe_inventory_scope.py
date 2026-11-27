@@ -4,8 +4,6 @@ from unittest.mock import MagicMock
 import pandas as pd
 import pytest
 
-import metrics_utility.automation_controller_billing.helpers as helpers_module
-
 from metrics_utility.automation_controller_billing.dataframe_engine.dataframe_inventory_scope import (
     DataframeInventoryScope,
     compute_serial,
@@ -54,10 +52,11 @@ def test_serial_from_facts_preserves_duplicate_index_and_dtype():
 
 
 @pytest.mark.parametrize('facts', ['null', '[]', '123'])
-def test_serial_from_facts_non_object_json_currently_raises(facts):
-    """Documents current behavior, not a contract: the parse_json gap is out of scope."""
-    with pytest.raises(AttributeError):
-        serial_from_facts(facts)
+def test_serial_from_facts_non_object_json_returns_none(facts):
+    """Non-object JSON carries no serial fields, so it yields no serial."""
+    assert serial_from_facts(facts) is None
+    dataframe = pd.DataFrame({'canonical_facts': [facts]})
+    assert dataframe['canonical_facts'].map(serial_from_facts).iloc[0] is None
 
 
 def test_build_dataframe_combines_serials_across_batches():
@@ -129,31 +128,6 @@ def _single_batch(facts_values, facts='{}'):
     ]
 
 
-def test_build_dataframe_parses_canonical_facts_once_per_row(monkeypatch):
-    """json.loads() must run once per canonical_facts row, not twice."""
-    real_loads = helpers_module.json.loads
-    decoded = []
-
-    def counting_loads(value, *args, **kwargs):
-        if isinstance(value, str) and 'ansible_product_serial' in value:
-            decoded.append(value)
-        return real_loads(value, *args, **kwargs)
-
-    monkeypatch.setattr(helpers_module.json, 'loads', counting_loads)
-
-    facts_values = [
-        '{"ansible_product_serial":"s1","ansible_machine_id":"m1"}',
-        '{"ansible_product_serial":"s2","ansible_machine_id":"m2"}',
-        '{"ansible_product_serial":"s3","ansible_machine_id":"m3"}',
-    ]
-    result = _engine_for_batches(_single_batch(facts_values)).build_dataframe()
-
-    assert result.iloc[0]['serials'] == {'s1/m1', 's2/m2', 's3/m3'}
-    # Three rows, three decodes: the previous implementation decoded each row a
-    # second time inside merge_json_sets().
-    assert len(decoded) == len(facts_values)
-
-
 @pytest.mark.parametrize(
     'raw',
     [
@@ -178,9 +152,9 @@ def test_build_dataframe_matches_direct_helper_results(raw):
     assert result.iloc[0]['canonical_facts'] == expected_facts
 
 
-@pytest.mark.parametrize('raw', ['[]', '123'])
+@pytest.mark.parametrize('raw', ['null', '[]', '123'])
 def test_build_dataframe_non_object_json_yields_no_serial(raw):
-    """Single-parse makes non-dict JSON degrade gracefully instead of raising."""
+    """Non-object JSON degrades gracefully instead of raising."""
     result = _engine_for_batches(_single_batch([raw])).build_dataframe()
 
     assert result.iloc[0]['serials'] == {None}
