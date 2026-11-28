@@ -1,0 +1,11 @@
+# Privacy-critical paths are reviewed by Emerging Services and Analytics HCC.
+# Keep this list in sync with .github/workflows/schema-review.yml.
+
+/privacy-contracts.yaml                    @hunterkepley @himdel @MilanPospisil @cshiels-ie @dmzoneill @AparnaKarve
+/tools/privacy_guard/                      @hunterkepley @himdel @MilanPospisil @cshiels-ie @dmzoneill @AparnaKarve
+/metrics_utility/schemas/                  @hunterkepley @himdel @MilanPospisil @cshiels-ie @dmzoneill @AparnaKarve
+/metrics_utility/anonymized_rollups/       @hunterkepley @himdel @MilanPospisil @cshiels-ie @dmzoneill @AparnaKarve
+/metrics_utility/library/storage/segment.py @hunterkepley @himdel @MilanPospisil @cshiels-ie @dmzoneill @AparnaKarve
+/metrics_utility/library/collectors/controller/ @hunterkepley @himdel @MilanPospisil @cshiels-ie @dmzoneill @AparnaKarve
+/metrics_utility/automation_controller_billing/collector.py @hunterkepley @himdel @MilanPospisil @cshiels-ie @dmzoneill @AparnaKarve
+/metrics_utility/management/validation.py  @hunterkepley @himdel @MilanPospisil @cshiels-ie @dmzoneill @AparnaKarve

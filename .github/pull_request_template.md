@@ -55,6 +55,12 @@ Dont forget to link back issue to PR.
 
 <!-- These items help ensure quality - they complement our automated CI checks -->
 
+### Data & Privacy Contracts
+
+- [ ] **Segment telemetry stays anonymized:** changes only add allowlisted aggregate fields — no hostnames, organization names, credentials, or raw controller identifiers.
+- [ ] **Billing archives contain no credentials:** no tokens, passwords, connection strings, or private keys in payloads, logs, or `config.json`.
+- [ ] **AWX / Controller collector or schema impact reviewed:** SQL privacy filters (such as `managed = true`) are preserved, and any contract change is reflected in `privacy-contracts.yaml`.
+
 ### Code Quality
 
 - [ ] Code is properly linted and formatted.

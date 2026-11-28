@@ -1,0 +1,146 @@
+# Data-flow contracts for the metrics-utility privacy guard.
+#
+# This file is the source of truth for what may leave a customer controller.
+# The deterministic checker and the AI reviewer both load it. When code and
+# this file disagree, this file wins.
+version: 1
+
+contracts:
+  segment_telemetry:
+    description: >-
+      Strictly anonymized aggregate telemetry sent to Segment. Output is an
+      explicit allowlist of aggregate counts, known public collection/module/
+      role names, managed=true credential type names, and an ephemeral random
+      anonymousId. Raw controller rows and customer identifiers never leave the
+      controller on this path.
+    paths:
+      - 'metrics_utility/anonymized_rollups/**'
+      - 'metrics_utility/library/storage/segment.py'
+      - 'metrics_utility/library/collectors/controller/credentials_service.py'
+      - 'metrics_utility/library/collectors/controller/table_metadata.py'
+    allowed:
+      - Aggregate counters and durations (jobs, hosts, tasks, inventories, templates, modules, collections, roles, indirect managed nodes)
+      - Known public collection, module, and role names from the checked-in allowlists
+      - Managed credential type names returned by credentials_service.py (managed = true)
+      - Ephemeral, randomly generated anonymousId values
+      - Segment envelope metadata (event name, timestamp, messageId, chunk info, schema version)
+    forbidden:
+      - Host names, host IDs, host_remote_id, canonical_facts, or ansible_host
+      - Organization, inventory, project, job-template, workflow, playbook, or execution-environment names
+      - Custom (non-allowlisted) collection, module, role, or credential names
+      - Usernames, emails, launched_by_username, or other person identifiers
+      - Account numbers, subscription IDs, install UUIDs, system UUIDs, or other stable customer identifiers
+      - Credentials, tokens, passwords, private keys, or payload dumps in Segment events or logs
+    owners:
+      - '@hunterkepley'
+      - '@himdel'
+      - '@MilanPospisil'
+      - '@cshiels-ie'
+      - '@dmzoneill'
+      - '@AparnaKarve'
+    review_notes: >-
+      Treat flatten_json_report() as the final privacy projection. Adding a
+      field there is a contract change. Keep allowlists fail-closed: unknown
+      collections, modules, roles, and credential types must be dropped, not
+      passed through. collections.json and types.py require explicit privacy
+      and schema review.
+
+  billing_archive:
+    description: >-
+      Customer billing tarballs, config.json, manifests, and the schemas that
+      validate them. Customer organization, host, license, subscription, and
+      billing metadata are allowed because the archive is the customer's own
+      billing evidence. Secrets and credentials are never allowed.
+    paths:
+      - 'metrics_utility/automation_controller_billing/**'
+      - 'metrics_utility/management/validation.py'
+      - 'metrics_utility/management/commands/gather_automation_controller_billing_data.py'
+      - 'metrics_utility/schemas/**'
+    allowed:
+      - Customer organization, host, license, subscription, and billing metadata defined by metrics_utility/schemas
+      - Job, job-template, inventory, and host summary fields needed to build the customer's billing report
+      - install_uuid, account_number, and subscription identifiers that are explicitly part of the billing schema
+      - Non-sensitive billing provider parameters such as provider name, account ID, and red-hat org ID
+      - Manifest, data_collection_status, and checksum metadata
+    forbidden:
+      - bucket_secret_key, bucket_access_key, and other cloud credentials
+      - candlepin_key_pem, candlepin_cert_pem, private keys, and mTLS material
+      - Passwords, API tokens, Segment write keys, and bearer tokens
+      - Logging or serializing billing_provider_params before redaction
+      - Unapproved schema drift or fields that are not traceable to a checked-in .jsonschema
+    owners:
+      - '@hunterkepley'
+      - '@himdel'
+      - '@MilanPospisil'
+      - '@cshiels-ie'
+      - '@dmzoneill'
+      - '@AparnaKarve'
+    review_notes: >-
+      Redaction must happen before serialization or logging. New billing
+      fields require a matching schema change and a contract update. The
+      _SENSITIVE_BILLING_KEYS denylist in automation_controller_billing/
+      collector.py must never shrink without explicit owner approval.
+
+  awx_analytics:
+    description: >-
+      Raw controller collectors and the base analytics/export machinery that
+      feed downstream anonymized rollups and billing archives. Collector
+      columns are schema-tracked and privacy predicates such as managed = true
+      are contract boundaries, not performance hints.
+    paths:
+      - 'metrics_utility/base/**'
+      - 'metrics_utility/library/collectors/controller/**'
+    allowed:
+      - Columns explicitly projected by schema-tracked collectors
+      - Explicit SQL predicates and hardcoded table allowlists that bound what is collected
+      - Aggregate counts, timestamps, and version metadata produced by approved collectors
+      - Data that is subsequently dropped or aggregated by downstream anonymization
+    forbidden:
+      - Unreviewed sensitive column additions such as launched_by_username, email, or password that bypass downstream exclusions and rollups
+      - SELECT * or dynamic column passthrough added to privacy-sensitive queries
+      - Removing or weakening hardcoded table allowlists (for example replacing main_jobevent/main_unifiedjob with pg_stat_user_tables)
+      - Removing privacy predicates such as managed = true, condition = 'boolean', or value = 'True'
+      - Credentials, tokens, passwords, private keys, or raw row dumps in logs or exceptions
+    owners:
+      - '@hunterkepley'
+      - '@himdel'
+      - '@MilanPospisil'
+      - '@cshiels-ie'
+      - '@dmzoneill'
+      - '@AparnaKarve'
+    review_notes: >-
+      New collector columns need a schema and contract update. Review SQL
+      predicates as privacy boundaries. Do not generalize table allowlists or
+      add user-identifying columns to controller queries.
+
+  internal_local_reports:
+    description: >-
+      Customer-local XLSX/ODS report builders and report savers. Customer
+      identifiers are intentionally allowed here because the report never
+      leaves the customer's controller. This contract exists so checks do not
+      false-positive on report code while still forbidding hardcoded secrets.
+    paths:
+      - 'metrics_utility/automation_controller_billing/report/**'
+      - 'metrics_utility/automation_controller_billing/report_saver/**'
+      - 'metrics_utility/management/commands/build_report.py'
+    allowed:
+      - Customer organization names, host names, canonical facts, and other report content
+      - License, subscription, and usage fields required by the customer's report
+      - Locally generated spreadsheet filenames, sheet names, and column headers
+      - Customer-local filesystem and report-saver destinations
+    forbidden:
+      - Hardcoded credentials, tokens, passwords, private keys, or API secrets
+      - Uploading or forwarding report contents to a remote telemetry endpoint
+      - Reading another customer's data or crossing tenant boundaries
+    owners:
+      - '@hunterkepley'
+      - '@himdel'
+      - '@MilanPospisil'
+      - '@cshiels-ie'
+      - '@dmzoneill'
+      - '@AparnaKarve'
+    review_notes: >-
+      Reports are customer-local and must never be uploaded as telemetry.
+      Customer identifiers in report builders are expected and should not be
+      reported as leaks. Still block hardcoded secrets and any new remote
+      upload path.

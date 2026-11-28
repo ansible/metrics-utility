@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "hooks": {
+    "beforeShellExecution": [
+      {
+        "command": "uv run python -m tools.privacy_guard hook --harness cursor --event pre-tool",
+        "timeout": 60,
+        "failClosed": false
+      }
+    ],
+    "afterFileEdit": [
+      {
+        "command": "uv run python -m tools.privacy_guard hook --harness cursor --event post-tool",
+        "timeout": 60,
+        "failClosed": false
+      }
+    ]
+  }
+}
