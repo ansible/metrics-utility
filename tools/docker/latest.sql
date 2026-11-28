@@ -3301,6 +3301,7 @@ CREATE TABLE public.main_project (
     default_environment_id integer,
     scm_track_submodules boolean NOT NULL,
     signature_validation_credential_id integer,
+    galaxy_update_on_launch boolean NOT NULL,
     CONSTRAINT main_project_scm_update_cache_timeout_check CHECK ((scm_update_cache_timeout >= 0))
 );
 
