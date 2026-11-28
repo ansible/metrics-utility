@@ -3,12 +3,16 @@
 from datetime import date, datetime
 from unittest.mock import MagicMock, patch
 
+import numpy as np
 import pandas as pd
 import pytest
 
 from metrics_utility.library.collectors.util import (
     _copy_table_files,
     _copy_table_pandas,
+    as_int,
+    as_int_list,
+    as_list,
     date_where,
     ensure_functions,
 )
@@ -382,3 +386,78 @@ class TestDateWhere:
         assert 'main_host.created <' in result
         # must NOT be quoted as "main_host.created" — PostgreSQL would treat that as a single identifier
         assert '"main_host.created"' not in result
+
+
+class TestAsList:
+    """as_list accepts flat iterables of values and rejects inputs that would iterate over something else."""
+
+    @pytest.mark.parametrize(
+        'values',
+        [
+            [4, 5],
+            (4, 5),
+            np.array([4, 5]),
+            pd.Series([4, 5]),
+            pd.Series([4, 5], index=['columns', 'id']),
+            pd.DataFrame({'id': [4, 5]})['id'],
+            (v for v in (4, 5)),
+        ],
+        ids=['list', 'tuple', 'ndarray', 'series', 'series_with_columns_label', 'dataframe_column', 'generator'],
+    )
+    def test_accepts_iterables(self, values):
+        assert as_list(values, 'ids') == [4, 5]
+
+    @pytest.mark.parametrize(
+        'values, type_name',
+        [
+            ('4,5', 'str'),
+            (b'45', 'bytes'),
+            (bytearray(b'45'), 'bytearray'),
+            (memoryview(b'45'), 'memoryview'),
+            ({4: 'a'}, 'dict'),
+            (pd.DataFrame({'id': [4, 5]}), 'DataFrame'),
+            (np.array(4), 'ndarray'),  # 0-d array: claims to be iterable but cannot be iterated
+            (4, 'int'),
+            (None, 'NoneType'),
+        ],
+        ids=['str', 'bytes', 'bytearray', 'memoryview', 'dict', 'dataframe', 'zero_dimensional_array', 'int', 'none'],
+    )
+    def test_rejects_non_lists_naming_only_the_type(self, values, type_name):
+        with pytest.raises(ValueError) as error:
+            as_list(values, 'ids', 'an iterable of integers')
+        assert str(error.value) == f'ids must be an iterable of integers, got {type_name}'
+
+    def test_default_description(self):
+        with pytest.raises(ValueError) as error:
+            as_list('4,5', 'ids')
+        assert str(error.value) == 'ids must be an iterable, got str'
+
+    def test_errors_raised_while_iterating_propagate(self):
+        def failing():
+            yield 4
+            raise TypeError('boom')
+
+        with pytest.raises(TypeError, match='boom'):
+            as_list(failing(), 'ids')
+
+
+class TestAsInt:
+    @pytest.mark.parametrize('value', [5, np.int64(5)])
+    def test_accepts_integers(self, value):
+        assert as_int(value, 'after_id') == 5
+
+    @pytest.mark.parametrize('value', [True, np.True_, 1.5, '5', None])
+    def test_rejects_non_integers(self, value):
+        with pytest.raises(ValueError) as error:
+            as_int(value, 'after_id')
+        assert str(error.value) == f'after_id must be an integer, got {value!r}'
+
+
+class TestAsIntList:
+    def test_accepts_integers(self):
+        assert as_int_list([np.int64(4), 5], 'job_ids') == [4, 5]
+
+    @pytest.mark.parametrize('values', [[True], [1.5], ['1'], [2**63]])
+    def test_rejects_non_integers_and_out_of_range(self, values):
+        with pytest.raises(ValueError, match=r'^job_ids must contain integers'):
+            as_int_list(values, 'job_ids')

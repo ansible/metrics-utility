@@ -1,12 +1,10 @@
 """Collector for unified_jobs extended with dashboard-specific fields."""
 
-import operator
-
-from ..util import DataframeOutput, collector, date_where
+from ..util import DataframeOutput, as_int, as_int_list, collector, date_where
 
 
 @collector
-def unified_jobs_dashboard(*, db=None, since=None, until=None, after_id=None, batch_size=None, output=DataframeOutput()):
+def unified_jobs_dashboard(*, db=None, since=None, until=None, after_id=None, batch_size=None, job_ids=None, output=DataframeOutput()):
     """Collect unified job records with additional fields required by the automation-reports dashboard.
 
     Extends the base ``unified_jobs`` query with project name, launched-by user,
@@ -14,8 +12,7 @@ def unified_jobs_dashboard(*, db=None, since=None, until=None, after_id=None, ba
     ``JobData`` and ``JobLabel`` records without a separate DB round-trip.
 
     Filters by ``finished`` timestamp (consistent with the anonymised rollup
-    pipeline). Only jobs with status ``failed`` or ``successful`` and
-    ``launch_type != 'sync'`` are useful to the dashboard, but filtering is
+    pipeline). Returns every unified job type and status; filtering is
     intentionally left to the caller so this collector can be reused broadly.
 
     Args:
@@ -27,29 +24,35 @@ def unified_jobs_dashboard(*, db=None, since=None, until=None, after_id=None, ba
             the previous page to fetch the next one.
         batch_size: Optional maximum number of rows to return, ordered by job ID.
             A page with fewer rows than *batch_size* is the last one.
+        job_ids: Optional iterable of job IDs (list, tuple, set, numpy array, pandas Series). When
+            provided, only these jobs are returned, with the same columns as without it (used by the daily
+            dashboard reconciliation to fetch missing jobs). It is combined with the other filters; pass no
+            *since*/*until* to select by ID only. An empty iterable returns no rows.
         output: Output adapter (defaults to :class:`~..util.DataframeOutput`).
 
     Returns:
         pandas DataFrame or list of CSV file paths depending on *output*.
 
     Raises:
-        ValueError: If *batch_size* is not a positive integer, or *after_id* is not an integer.
+        ValueError: If *batch_size* is not a positive integer, *after_id* is not an integer, or
+            *job_ids* is a string, bytes (``bytes``, ``bytearray``, ``memoryview``), a mapping, a DataFrame, not
+            iterable, or contains a value that is not an integer in the bigint range.
     """
     id_where = ''
     limit = ''
+    params = None
     if after_id is not None:
-        if isinstance(after_id, bool):
-            raise ValueError(f'after_id must be an integer, got {after_id!r}')
-        try:
-            # operator.index accepts integer-like values (e.g. numpy integers from a DataFrame) and returns an int
-            after_id = operator.index(after_id)
-        except TypeError:
-            raise ValueError(f'after_id must be an integer, got {after_id!r}') from None
+        after_id = as_int(after_id, 'after_id')
         id_where = f'AND main_unifiedjob.id > {after_id}'
     if batch_size is not None:
         if isinstance(batch_size, bool) or not isinstance(batch_size, int) or batch_size <= 0:
             raise ValueError(f'batch_size must be a positive integer, got {batch_size!r}')
         limit = f'LIMIT {batch_size}'
+    if job_ids is not None:
+        # With job_ids the query is executed with bound parameters, so psycopg parses every '%' in it as a
+        # placeholder: a literal '%' (e.g. in a LIKE pattern) must be written as '%%'.
+        params = [as_int_list(job_ids, 'job_ids')]
+        id_where += ' AND main_unifiedjob.id = ANY(%s::bigint[])'
 
     query = f"""
         SELECT
@@ -112,4 +115,7 @@ def unified_jobs_dashboard(*, db=None, since=None, until=None, after_id=None, ba
         {limit}
     """
 
-    return output.sql(db, query)
+    if params is None:
+        # Without job_ids the call is unchanged, so output adapters implementing only sql(db, query) keep working.
+        return output.sql(db, query)
+    return output.sql(db, query, params)

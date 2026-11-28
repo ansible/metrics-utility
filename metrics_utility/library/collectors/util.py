@@ -1,7 +1,10 @@
 """Collector output helpers, SQL execution utilities, and the ``@collector`` decorator."""
 
+import operator
+import sys
 import tempfile
 
+from collections.abc import Iterable, Mapping
 from datetime import datetime
 
 from ..csv_file_splitter import CsvFileSplitter
@@ -214,6 +217,90 @@ def date_where(field, since, until):
         return f"( {field} < '{until.isoformat()}' )"
 
     return 'true'
+
+
+def _is_dataframe(values) -> bool:
+    """Return whether *values* is a pandas DataFrame, checked by type without importing pandas."""
+    # When pandas has not been imported, no DataFrame can exist.
+    pandas = sys.modules.get('pandas')
+    return pandas is not None and isinstance(values, pandas.DataFrame)
+
+
+def as_list(values, name: str, expected: str = 'an iterable') -> list:
+    """Return *values* as a list, or raise ``ValueError`` when they cannot be used as a flat list of values.
+
+    Any iterable is accepted (list, tuple, set, generator, numpy array, pandas Series) except a string, bytes,
+    a mapping or a DataFrame: iterating those yields characters, keys or column labels instead of values. The
+    error message names only the type, never the whole (possibly large) input.
+
+    Args:
+        values: The values to convert.
+        name: Argument name used in the error message.
+        expected: Description of the expected value used in the error message.
+    """
+    if isinstance(values, (str, bytes, bytearray, memoryview, Mapping)) or not isinstance(values, Iterable) or _is_dataframe(values):
+        raise ValueError(f'{name} must be {expected}, got {type(values).__name__}')
+    try:
+        iterator = iter(values)
+    except TypeError:
+        # e.g. a 0-d numpy array, which claims to be iterable but cannot be iterated
+        raise ValueError(f'{name} must be {expected}, got {type(values).__name__}') from None
+    # Errors raised while iterating (e.g. inside a generator) propagate unchanged.
+    return list(iterator)
+
+
+# Integer lists are bound as ``bigint[]`` (e.g. ``main_unifiedjob.id``, an ``integer`` column).
+_BIGINT_MIN = -(2**63)
+_BIGINT_MAX = 2**63 - 1
+
+
+def _is_bool(value) -> bool:
+    """Return whether *value* is a Python or numpy boolean, checked without importing numpy."""
+    # Older numpy versions accept ``operator.index(numpy.True_)``, so a boolean mask would turn into 0 and 1.
+    numpy = sys.modules.get('numpy')
+    return isinstance(value, bool) or (numpy is not None and isinstance(value, numpy.bool_))
+
+
+def _to_int(value) -> int | None:
+    """Return integer-like *value* as an int, or None; booleans (Python or numpy), floats and strings give None.
+
+    ``operator.index`` accepts integer-like values (e.g. numpy integers from a DataFrame) and returns an int.
+    """
+    if _is_bool(value):
+        return None
+    try:
+        return operator.index(value)
+    except TypeError:
+        return None
+
+
+def as_int(value, name: str) -> int:
+    """Return integer-like *value* as an int, or raise ``ValueError('<name> must be an integer, got <value>')``.
+
+    Accepts ints and integer-like values such as numpy integers; booleans (Python or numpy), floats and strings
+    are rejected.
+    """
+    result = _to_int(value)
+    if result is None:
+        raise ValueError(f'{name} must be an integer, got {value!r}')
+    return result
+
+
+def as_int_list(values, name: str) -> list[int]:
+    """Return *values* as a list of ints in the bigint range, or raise ``ValueError``.
+
+    Accepts what :func:`as_list` accepts, with elements that :func:`as_int` accepts. Error messages name only
+    the offending element or the type, never the whole (possibly large) input.
+    """
+    validated = []
+    for item in as_list(values, name, 'an iterable of integers'):
+        value = _to_int(item)
+        if value is None:
+            raise ValueError(f'{name} must contain integers, got {item!r}')
+        if not _BIGINT_MIN <= value <= _BIGINT_MAX:
+            raise ValueError(f'{name} must contain integers in the bigint range, got {item!r}')
+        validated.append(value)
+    return validated
 
 
 def collector(func):

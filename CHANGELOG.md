@@ -6,6 +6,7 @@
 - remove django-ansible-base dependency
 - remove unused `kubernetes` dependency
 - `dashboard_jobs`: add `organization_name`
+- `unified_jobs_dashboard`: add `job_ids`; dashboard: add reconciliation query helpers and `job_ids_digest`, export `*_for_ids_query` helpers (AAP-103350)
 - reports: preserve literal text and native scalar types in spreadsheet output
 - TODO
 
